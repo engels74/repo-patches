@@ -1,4 +1,4 @@
-# .github/workflows/sync_and_update_branches.yml
+# .github/workflows/base-image.yml
 
 name: Sync and Update Specific Branches from Upstream
 
@@ -21,7 +21,7 @@ jobs:
           # Fetch all history so we can switch branches and reset
           fetch-depth: 0
 
-      - name: Configure Git
+      - name: Configure Git for base-image
         # Configure git using the PAT user context implicitly provided by checkout
         # Or explicitly set a bot user if preferred
         run: |
@@ -34,7 +34,7 @@ jobs:
       - name: Fetch Upstream Branches
         run: git fetch upstream
 
-      - name: Process Branches
+      - name: Process Branches in base-image
         # Use the literal block scalar '|' and ensure all script lines below are indented
         run: |
           set -e # Exit immediately if a command exits with a non-zero status.
@@ -120,3 +120,27 @@ jobs:
           done
 
           echo "All specified branches processed."
+
+      - name: Checkout Repo Patches Repository
+        uses: actions/checkout@v4
+        with:
+          repository: engels74/repo-patches # The repository to add the empty commit to
+          token: ${{ secrets.GH_PAT }}      # Use the same PAT
+          path: repo-patches                # Checkout to a specific subdirectory to avoid conflicts
+          ref: main                         # Specify the branch you want to commit to (e.g., main, master)
+
+      - name: Create and Push Empty Commit to Repo Patches
+        # Run commands inside the checked-out repo-patches directory
+        working-directory: ./repo-patches
+        run: |
+          # Configure git user specifically for this checkout (good practice)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Create an empty commit. Add [skip ci] if you want to prevent this commit from triggering CI itself.
+          git commit --allow-empty -m "chore: Trigger downstream workflows [skip ci]"
+
+          # Push the empty commit to the specified branch
+          # Ensure 'main' matches the 'ref' used in the checkout step above
+          git push origin main
+          echo "Empty commit pushed to engels74/repo-patches on branch main."
