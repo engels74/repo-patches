@@ -1,61 +1,43 @@
-# .github/workflows/base-image.yml
+name: Sync and Update Repository
 
-name: Sync and Update Specific Branches from Upstream
-
-# Allow manual triggering
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'  # Run at 3 AM UTC daily
 
 jobs:
   sync_and_update:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Target Repository (engels74/base-image)
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           repository: engels74/base-image
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Configure Git for base-image
+      - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Add Upstream Remote
+      - name: Add Upstream Repository
         run: git remote add upstream https://github.com/hotio/base.git
 
-      - name: Fetch Upstream Branches
+      - name: Fetch Upstream
         run: git fetch upstream
 
-      - name: Process Branches in base-image
+      - name: Sync and Apply Custom Updates
         run: |
           set -e # Exit immediately if a command exits with a non-zero status.
-          # set -x # Uncomment for detailed command execution logging
-
+          
           BRANCHES_TO_SYNC="alpinevpn jammyvpn noblevpn"
           TARGET_REPO_OWNER="engels74"
           UPSTREAM_REPO_OWNER="hotio"
-
-          # Define the text block to insert in Dockerfiles
-          # Use standard shell variable definition with appropriate escaping for the *final* Dockerfile content
-          # Ensure internal single quotes are escaped as \x27
-          # Ensure $ for shell command substitution inside Dockerfile is escaped as \$
-          # Ensure backslashes for line continuation are present
-          DOCKERFILE_INSERT_TEXT=' && \\\
-              sed -i \x27/figlet/ s/hotio/engels74/; \\\
-                      /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\\
-                      /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\\
-                      /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r \\x27.app\\x27 <<< "\$(base64 --decode <<< "\${IMAGE_STATS}")")/issues|\x27 \\\
-                  /etc/s6-overlay/s6-rc.d/init-setup/run'
-
-          # Unique marker string to insert temporarily
-          MARKER="%%%__INSERT_CUSTOM_SED_COMMAND_HERE__%%%"
-
+          
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
-
+            
             # 1. Checkout the branch
             echo "Checking out and resetting local branch '$branch' to 'upstream/$branch'..."
             git checkout -B "$branch" "upstream/$branch"
@@ -63,10 +45,10 @@ jobs:
               echo "Error checking out or resetting branch $branch from upstream/$branch. Skipping."
               continue
             fi
-
-            # 2. Run the modification script logic directly
+            
+            # 2. Apply modifications to files
             echo "Applying modifications to files on branch '$branch'..."
-
+            
             # 2a. Update .github/workflows/call-build.yml
             CALL_BUILD=".github/workflows/call-build.yml"
             if [[ -f "$CALL_BUILD" ]]; then
@@ -75,76 +57,38 @@ jobs:
             else
                 echo "File not found: $CALL_BUILD (Skipping update)"
             fi
-
-            # 2b. Update Dockerfiles using a two-step marker insertion/replacement
-            DOCKERFILE_AMD64="linux-amd64.Dockerfile"
-            DOCKERFILE_ARM64="linux-arm64.Dockerfile"
-            TARGET_LINE_PATTERN='/etc/s6-overlay/init-hook' # Line to insert *after*
-            MODIFICATION_CHECK_PATTERN='/etc/s6-overlay/s6-rc.d/init-setup/run' # Pattern to verify success
-
-            echo "Attempting to update Dockerfiles using marker method..."
-            for dockerfile in "$DOCKERFILE_AMD64" "$DOCKERFILE_ARM64"; do
+            
+            # 2b. Update Dockerfiles using a more reliable approach
+            echo "Modifying Dockerfiles..."
+            for dockerfile in "linux-amd64.Dockerfile" "linux-arm64.Dockerfile"; do
               if [[ -f "$dockerfile" ]]; then
-                  # Check if the target line pattern exists
-                  if grep -Fq "$TARGET_LINE_PATTERN" "$dockerfile"; then
-                      # Check if the modification is already present
-                      if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile"; then
-                          echo "Modification already seems present in $dockerfile. Skipping update."
-                      # Check if the marker is somehow already present (e.g., from a failed previous run)
-                      elif grep -Fq "$MARKER" "$dockerfile"; then
-                          echo "Marker '$MARKER' found in $dockerfile (likely from previous failed run). Attempting replacement..."
-                          # --- CHANGE: Refined escaping for sed 's' replacement ---
-                          # Escape backslash '\', ampersand '&', and the delimiter '#'
-                          ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\&]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g')
-                          # Use '#' as delimiter for the 's' command
-                          sed -i "s#${MARKER}#${ESCAPED_INSERT_TEXT_FOR_S}#" "$dockerfile"
-                          # Verification after replacing existing marker
-                          if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile" && ! grep -Fq "$MARKER" "$dockerfile"; then
-                              echo "Successfully replaced existing marker and verified modification in $dockerfile."
-                          else
-                              echo "ERROR: Failed to verify modification after replacing existing marker in $dockerfile."
-                              # exit 1 # Optional exit
-                          fi
-                      else
-                          # --- Step 1: Insert the marker ---
-                          echo "Target line pattern '$TARGET_LINE_PATTERN' found in $dockerfile. Inserting marker..."
-                          # Use '#' as delimiter for the address to avoid conflict with '/' in pattern
-                          # Append the marker on a new line after the matched line
-                          sed -i "\#${TARGET_LINE_PATTERN}#a ${MARKER}" "$dockerfile"
-
-                          # Verify marker insertion before proceeding
-                          if grep -Fq "$MARKER" "$dockerfile"; then
-                              echo "Marker inserted successfully. Replacing marker with actual command..."
-                              # --- Step 2: Replace the marker ---
-                              # --- CHANGE: Refined escaping for sed 's' replacement ---
-                              # Escape backslash '\', ampersand '&', and the delimiter '#'
-                              ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\&]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g')
-                              # Use '#' as delimiter for the 's' command
-                              sed -i "s#${MARKER}#${ESCAPED_INSERT_TEXT_FOR_S}#" "$dockerfile"
-
-                              # === Verification Step ===
-                              if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile" && ! grep -Fq "$MARKER" "$dockerfile"; then
-                                  echo "Successfully inserted marker, replaced it, and verified modification in $dockerfile"
-                              else
-                                  echo "ERROR: Failed to verify modification in $dockerfile after attempting marker replacement."
-                                  echo "--- Content around marker in $dockerfile ---"
-                                  # Use grep -F to avoid regex interpretation of marker
-                                  grep -C 5 -F "$MARKER" "$dockerfile" || echo "Marker not found during verification."
-                                  echo "-------------------------------------------"
-                                  # exit 1 # Optionally exit if verification fails
-                              fi
-                          else
-                              echo "ERROR: Failed to insert marker '$MARKER' into $dockerfile after command execution."
-                          fi
-                      fi
-                  else
-                      echo "Target pattern '${TARGET_LINE_PATTERN}' not found in $dockerfile using grep -Fq. Skipping update."
-                  fi
+                # Check if the modification is already present
+                if grep -q "/etc/s6-overlay/s6-rc.d/init-setup/run" "$dockerfile"; then
+                  echo "Modification already present in $dockerfile. Skipping."
+                else
+                  # Create a temporary file
+                  NEW_CONTENT=""
+                  while IFS= read -r line; do
+                    NEW_CONTENT+="$line"$'\n'
+                    if [[ "$line" == *"chmod +x /etc/s6-overlay/init-hook"* ]]; then
+                      NEW_CONTENT+=" && \\"$'\n'
+                      NEW_CONTENT+="    sed -i '/figlet/ s/hotio/engels74/; \\"$'\n'
+                      NEW_CONTENT+="            /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\"$'\n'
+                      NEW_CONTENT+="            /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\"$'\n'
+                      NEW_CONTENT+="            /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r '"'"'.app'"'"' <<< \"\$(base64 --decode <<< \"\${IMAGE_STATS}\")\")\/issues|' \\"$'\n'
+                      NEW_CONTENT+="        /etc/s6-overlay/s6-rc.d/init-setup/run"$'\n'
+                    fi
+                  done < "$dockerfile"
+                  
+                  # Replace the original file
+                  echo -n "$NEW_CONTENT" > "$dockerfile"
+                  echo "Successfully modified $dockerfile"
+                fi
               else
-                  echo "File not found: $dockerfile (Skipping update)"
+                echo "File not found: $dockerfile (Skipping update)"
               fi
             done
-
+            
             # 2c. Overwrite README.md using printf (YAML safe)
             README="README.md"
             echo "Overwriting $README using printf..."
@@ -155,43 +99,23 @@ jobs:
               '' \
               'Detailed information and documentation available on the [master branch README](https://github.com/engels74/base-image/tree/master).' > "$README"
             echo "Overwritten $README"
-
+            
             # 3. Commit the changes if any
             echo "Checking for changes on branch '$branch'..."
-            echo "--- Git Status Before Commit ---"
-            git status --porcelain
-            echo "------------------------------"
             if [[ -n $(git status --porcelain) ]]; then
               echo "Changes detected. Committing..."
               git add .
               git commit -m "Sync with upstream ($UPSTREAM_REPO_OWNER/base@$branch) and apply custom updates"
-
+              
               # 4. Force push the changes
               echo "Force pushing branch '$branch' to origin..."
               git push origin "$branch" --force
             else
               echo "No changes detected on branch '$branch' after modifications."
             fi
-
+            
             echo "--- Finished processing branch: $branch ---"
-            echo "" # Add a newline for readability
+            echo ""
           done
-
+          
           echo "All specified branches processed."
-
-      - name: Checkout Repo Patches Repository
-        uses: actions/checkout@v4
-        with:
-          repository: engels74/repo-patches
-          token: ${{ secrets.GH_PAT }}
-          path: repo-patches
-          ref: main
-
-      - name: Create and Push Empty Commit to Repo Patches
-        working-directory: ./repo-patches
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "chore: Trigger downstream workflows [skip ci]"
-          git push origin main
-          echo "Empty commit pushed to engels74/repo-patches on branch main."
