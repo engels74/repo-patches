@@ -14,16 +14,11 @@ jobs:
       - name: Checkout Target Repository (engels74/base-image)
         uses: actions/checkout@v4
         with:
-          # Checkout the specific repository you want to modify
           repository: engels74/base-image
-          # Use the fine-grained PAT stored as a secret
           token: ${{ secrets.GH_PAT }}
-          # Fetch all history so we can switch branches and reset
           fetch-depth: 0
 
       - name: Configure Git for base-image
-        # Configure git using the PAT user context implicitly provided by checkout
-        # Or explicitly set a bot user if preferred
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -35,24 +30,35 @@ jobs:
         run: git fetch upstream
 
       - name: Process Branches in base-image
-        # Use the literal block scalar '|' and ensure all script lines below are indented
         run: |
           set -e # Exit immediately if a command exits with a non-zero status.
 
           BRANCHES_TO_SYNC="alpinevpn jammyvpn noblevpn"
-          TARGET_REPO_OWNER="engels74" # Your username/org
-          UPSTREAM_REPO_OWNER="hotio" # Upstream username/org
+          TARGET_REPO_OWNER="engels74"
+          UPSTREAM_REPO_OWNER="hotio"
+
+          # Define the text block to append in Dockerfiles after the chmod line
+          # Use single quotes for the outer shell variable to prevent premature expansion
+          # Escape internal single quotes with \x27 for sed
+          # Escape backslashes needed by sed 'a\' command and line continuation
+          # Escape the $ in $(jq...) so it's interpreted inside the Dockerfile RUN, not by the workflow shell
+          # Ensure indentation within this variable matches the desired Dockerfile format
+          export DOCKERFILE_APPEND_TEXT=' && \\\
+              sed -i \x27/figlet/ s/hotio/engels74/; \\\
+                      /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\\
+                      /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\\
+                      /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r \\x27.app\\x27 <<< "$(base64 --decode <<< "${IMAGE_STATS}")")/issues|\x27 \\\
+                  /etc/s6-overlay/s6-rc.d/init-setup/run'
 
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
 
-            # 1. Checkout the branch (create if it doesn't exist locally)
-            #    Use -B to create or reset the branch
+            # 1. Checkout the branch
             echo "Checking out and resetting local branch '$branch' to 'upstream/$branch'..."
             git checkout -B "$branch" "upstream/$branch"
             if [ $? -ne 0 ]; then
               echo "Error checking out or resetting branch $branch from upstream/$branch. Skipping."
-              continue # Skip to the next branch if checkout/reset fails
+              continue
             fi
 
             # 2. Run the modification script logic directly
@@ -68,26 +74,33 @@ jobs:
                 echo "File not found: $CALL_BUILD (Skipping update)"
             fi
 
-            # 2b. Update root/etc/s6-overlay/s6-rc.d/init-setup/run
-            INIT_RUN="root/etc/s6-overlay/s6-rc.d/init-setup/run"
-            if [[ -f "$INIT_RUN" ]]; then
-                # Use a different delimiter like '#' for sed to avoid issues with slashes in paths
-                sed -i \
-                    -e 's/$(figlet "hotio")/$(figlet "engels74")/' \
-                    -e 's|https://hotio.dev/donate|https://engels74.net/donate|' \
-                    -e 's|https://hotio.dev|https://engels74.net|g' \
-                    -e 's|Support:.*|Support:       https://github.com/engels74/base-image/issues|' \
-                    "$INIT_RUN"
-                echo "Updated $INIT_RUN"
-            else
-                echo "File not found: $INIT_RUN (Skipping update)"
-            fi
+            # 2b. Update Dockerfiles by appending sed command to the root-files RUN block
+            DOCKERFILE_AMD64="linux-amd64.Dockerfile"
+            DOCKERFILE_ARM64="linux-arm64.Dockerfile"
+            # Regex pattern for the line *after which* to append the text
+            # Matches the line exactly, including indentation
+            TARGET_LINE_PATTERN='^    chmod \+x /etc/s6-overlay/init-hook$'
+
+            echo "Attempting to update Dockerfiles..."
+            for dockerfile in "$DOCKERFILE_AMD64" "$DOCKERFILE_ARM64"; do
+              if [[ -f "$dockerfile" ]]; then
+                  # Check if the modification is already present to avoid duplicate appends
+                  if grep -q '/etc/s6-overlay/s6-rc.d/init-setup/run' "$dockerfile"; then
+                      echo "Modification already seems present in $dockerfile. Skipping append."
+                  else
+                      # Use '#' as delimiter for sed address to avoid escaping slashes
+                      # Use the 'a\' command to append the exported text block *after* the matched line
+                      sed -i '\#'"$TARGET_LINE_PATTERN"'#a\'"$DOCKERFILE_APPEND_TEXT" "$dockerfile"
+                      echo "Updated $dockerfile"
+                  fi
+              else
+                  echo "File not found: $dockerfile (Skipping update)"
+              fi
+            done
 
             # 2c. Overwrite README.md using printf (YAML safe)
             README="README.md"
             echo "Overwriting $README using printf..."
-            # Use printf with %s\n for each line. This avoids heredoc issues.
-            # Ensure this whole printf command block maintains the script's indentation level.
             printf '%s\n' \
               '# base-image (engels74)' \
               '' \
@@ -98,21 +111,16 @@ jobs:
 
             # 3. Commit the changes if any
             echo "Checking for changes on branch '$branch'..."
-            # Use git status --porcelain to see if there are changes
             if [[ -n $(git status --porcelain) ]]; then
               echo "Changes detected. Committing..."
               git add .
               git commit -m "Sync with upstream ($UPSTREAM_REPO_OWNER/base@$branch) and apply custom updates"
 
               # 4. Force push the changes
-              # Git push will use the credentials associated with the checkout token (GH_PAT)
               echo "Force pushing branch '$branch' to origin..."
               git push origin "$branch" --force
             else
               echo "No changes detected on branch '$branch' after modifications."
-              # Optional: Still force push if you want to ensure it matches upstream even if script made no changes
-              # echo "Force pushing branch '$branch' to ensure alignment with upstream..."
-              # git push origin "$branch" --force
             fi
 
             echo "--- Finished processing branch: $branch ---"
@@ -124,23 +132,16 @@ jobs:
       - name: Checkout Repo Patches Repository
         uses: actions/checkout@v4
         with:
-          repository: engels74/repo-patches # The repository to add the empty commit to
-          token: ${{ secrets.GH_PAT }}      # Use the same PAT
-          path: repo-patches                # Checkout to a specific subdirectory to avoid conflicts
-          ref: main                         # Specify the branch you want to commit to (e.g., main, master)
+          repository: engels74/repo-patches
+          token: ${{ secrets.GH_PAT }}
+          path: repo-patches
+          ref: main
 
       - name: Create and Push Empty Commit to Repo Patches
-        # Run commands inside the checked-out repo-patches directory
         working-directory: ./repo-patches
         run: |
-          # Configure git user specifically for this checkout (good practice)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Create an empty commit. Add [skip ci] if you want to prevent this commit from triggering CI itself.
           git commit --allow-empty -m "chore: Trigger downstream workflows [skip ci]"
-
-          # Push the empty commit to the specified branch
-          # Ensure 'main' matches the 'ref' used in the checkout step above
           git push origin main
           echo "Empty commit pushed to engels74/repo-patches on branch main."
