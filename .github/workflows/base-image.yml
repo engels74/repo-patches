@@ -2,6 +2,7 @@
 
 name: Sync and Update Specific Branches from Upstream
 
+# Allow manual triggering
 on:
   workflow_dispatch:
 
@@ -30,24 +31,40 @@ jobs:
 
       - name: Process Branches in base-image
         run: |
-          set -e
+          set -e # Exit immediately if a command exits with a non-zero status.
+          # set -x # Uncomment for detailed command execution logging
 
           BRANCHES_TO_SYNC="alpinevpn jammyvpn noblevpn"
           TARGET_REPO_OWNER="engels74"
           UPSTREAM_REPO_OWNER="hotio"
 
+          # Define the text block to append in Dockerfiles after the chmod line
+          # Starts with ' && \' and includes the multi-line sed command
+          # Ensure internal single quotes are escaped as \x27
+          # Ensure $ for shell command substitution inside Dockerfile is escaped as \$
+          # Ensure backslashes for line continuation are present
+          DOCKERFILE_APPEND_TEXT=' && \\\
+              sed -i \x27/figlet/ s/hotio/engels74/; \\\
+                      /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\\
+                      /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\\
+                      /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r \\x27.app\\x27 <<< "\$(base64 --decode <<< "\${IMAGE_STATS}")")/issues|\x27 \\\
+                  /etc/s6-overlay/s6-rc.d/init-setup/run'
+
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
 
+            # 1. Checkout the branch
+            echo "Checking out and resetting local branch '$branch' to 'upstream/$branch'..."
             git checkout -B "$branch" "upstream/$branch"
             if [ $? -ne 0 ]; then
               echo "Error checking out or resetting branch $branch from upstream/$branch. Skipping."
               continue
             fi
 
+            # 2. Run the modification script logic directly
             echo "Applying modifications to files on branch '$branch'..."
 
-            # 1. Update .github/workflows/call-build.yml
+            # 2a. Update .github/workflows/call-build.yml
             CALL_BUILD=".github/workflows/call-build.yml"
             if [[ -f "$CALL_BUILD" ]]; then
                 sed -i 's|hotio/build-workflow/.github/workflows/build-on-call.yml@master|engels74/docker-build-workflow/.github/workflows/build-on-call.yml@master|' "$CALL_BUILD"
@@ -56,38 +73,52 @@ jobs:
                 echo "File not found: $CALL_BUILD (Skipping update)"
             fi
 
-            # 2. Update both Dockerfiles at root
-            for DOCKERFILE in linux-amd64.Dockerfile linux-arm64.Dockerfile; do
-              if [[ -f "$DOCKERFILE" ]]; then
-                echo "Modifying $DOCKERFILE..."
+            # 2b. Update Dockerfiles by appending sed command to the root-files RUN block
+            DOCKERFILE_AMD64="linux-amd64.Dockerfile"
+            DOCKERFILE_ARM64="linux-arm64.Dockerfile"
+            # More flexible pattern: find the line *containing* the chmod command.
+            # This avoids issues with exact indentation matching.
+            TARGET_LINE_PATTERN='chmod \+x /etc/s6-overlay/init-hook'
+            # Pattern to check if modification already exists (checks for the script path)
+            MODIFICATION_CHECK_PATTERN='/etc/s6-overlay/s6-rc.d/init-setup/run'
 
-                # Use awk to replace the block between '# install root-files' and 'chmod +x /etc/s6-overlay/init-hook'
-                awk '
-                  BEGIN {in_block=0}
-                  /^# install root-files/ {print; in_block=1; next}
-                  in_block && /^RUN curl -fsSL "https:\/\/github.com\/hotio\/root-files-archive\/\$\{VERSION_ROOT_FILES\}.tar.gz"/ {next}
-                  in_block && /chmod \+x \/etc\/s6-overlay\/init-hook/ {
-                    # Output the new block
-                    print "RUN curl -fsSL \"https://github.com/hotio/root-files/archive/${VERSION_ROOT_FILES}.tar.gz\" | tar zpxf - -C / \"root-files-${VERSION_ROOT_FILES}/root\" --strip-components=2 && \\"
-                    print "    chmod +x /etc/s6-overlay/init-hook && \\"
-                    print "    sed -i '/figlet/ s/hotio/engels74/; \\"
-                    print "            /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\"
-                    print "            /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\"
-                    print "            /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r \x27.app\x27 <<< \"$(base64 --decode <<< \"${IMAGE_STATS}\")\")/issues|' \\"
-                    print "        /etc/s6-overlay/s6-rc.d/init-setup/run"
-                    in_block=0
-                    next
-                  }
-                  !in_block {print}
-                ' "$DOCKERFILE" > "${DOCKERFILE}.tmp" && mv "${DOCKERFILE}.tmp" "$DOCKERFILE"
+            echo "Attempting to update Dockerfiles..."
+            for dockerfile in "$DOCKERFILE_AMD64" "$DOCKERFILE_ARM64"; do
+              if [[ -f "$dockerfile" ]]; then
+                  # Check if the target line pattern exists in the file
+                  if grep -q "$TARGET_LINE_PATTERN" "$dockerfile"; then
+                      # Check if the modification we want to add is already present
+                      if grep -q "$MODIFICATION_CHECK_PATTERN" "$dockerfile"; then
+                          echo "Modification already seems present in $dockerfile. Skipping append."
+                      else
+                          echo "Target line found in $dockerfile. Appending modification..."
+                          # Escape backslashes in the append text variable for the sed 'a\' command
+                          ESCAPED_APPEND_TEXT_FOR_A=$(printf '%s' "$DOCKERFILE_APPEND_TEXT" | sed 's/\\/\\\\/g')
+                          # Use sed 'a\' command to append the text block *after* the line containing the pattern
+                          # The address /.../ finds the line containing TARGET_LINE_PATTERN
+                          sed -i "/${TARGET_LINE_PATTERN}/a\\${ESCAPED_APPEND_TEXT_FOR_A}" "$dockerfile"
 
-                echo "Updated $DOCKERFILE"
+                          # === Verification Step ===
+                          if grep -q "$MODIFICATION_CHECK_PATTERN" "$dockerfile"; then
+                              echo "Successfully updated and verified $dockerfile"
+                          else
+                              echo "ERROR: Failed to verify modification in $dockerfile after attempting append."
+                              # Optional: Display the lines around the target pattern for debugging
+                              echo "--- Lines around target in $dockerfile ---"
+                              grep -C 3 "$TARGET_LINE_PATTERN" "$dockerfile" || echo "Target pattern not found during verification."
+                              echo "-------------------------------------------"
+                              # exit 1 # Optionally exit if verification fails
+                          fi
+                      fi
+                  else
+                      echo "Target pattern '${TARGET_LINE_PATTERN}' not found in $dockerfile. Skipping update."
+                  fi
               else
-                echo "File not found: $DOCKERFILE (Skipping update)"
+                  echo "File not found: $dockerfile (Skipping update)"
               fi
             done
 
-            # 3. Overwrite README.md using printf
+            # 2c. Overwrite README.md using printf (YAML safe)
             README="README.md"
             echo "Overwriting $README using printf..."
             printf '%s\n' \
@@ -98,12 +129,18 @@ jobs:
               'Detailed information and documentation available on the [master branch README](https://github.com/engels74/base-image/tree/master).' > "$README"
             echo "Overwritten $README"
 
-            # 4. Commit the changes if any
+            # 3. Commit the changes if any
             echo "Checking for changes on branch '$branch'..."
+            # Add extra debug: show status *before* commit
+            echo "--- Git Status Before Commit ---"
+            git status --porcelain
+            echo "------------------------------"
             if [[ -n $(git status --porcelain) ]]; then
               echo "Changes detected. Committing..."
               git add .
               git commit -m "Sync with upstream ($UPSTREAM_REPO_OWNER/base@$branch) and apply custom updates"
+
+              # 4. Force push the changes
               echo "Force pushing branch '$branch' to origin..."
               git push origin "$branch" --force
             else
@@ -111,7 +148,7 @@ jobs:
             fi
 
             echo "--- Finished processing branch: $branch ---"
-            echo ""
+            echo "" # Add a newline for readability
           done
 
           echo "All specified branches processed."
