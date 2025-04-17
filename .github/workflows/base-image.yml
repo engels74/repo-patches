@@ -2,8 +2,6 @@ name: Sync and Update Repository
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * *'  # Run at 3 AM UTC daily
 
 jobs:
   sync_and_update:
@@ -66,17 +64,20 @@ jobs:
                 if grep -q "/etc/s6-overlay/s6-rc.d/init-setup/run" "$dockerfile"; then
                   echo "Modification already present in $dockerfile. Skipping."
                 else
-                  # Create a temporary file
+                  # Create a temporary file with line-by-line approach
                   NEW_CONTENT=""
                   while IFS= read -r line; do
-                    NEW_CONTENT+="$line"$'\n'
                     if [[ "$line" == *"chmod +x /etc/s6-overlay/init-hook"* ]]; then
-                      NEW_CONTENT+=" && \\"$'\n'
+                      # Append to this line without adding a newline
+                      NEW_CONTENT+="$line && \\"$'\n'
                       NEW_CONTENT+="    sed -i '/figlet/ s/hotio/engels74/; \\"$'\n'
                       NEW_CONTENT+="            /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\"$'\n'
                       NEW_CONTENT+="            /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\"$'\n'
                       NEW_CONTENT+="            /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r '"'"'.app'"'"' <<< \"\$(base64 --decode <<< \"\${IMAGE_STATS}\")\")\/issues|' \\"$'\n'
                       NEW_CONTENT+="        /etc/s6-overlay/s6-rc.d/init-setup/run"$'\n'
+                    else
+                      # Add other lines normally
+                      NEW_CONTENT+="$line"$'\n'
                     fi
                   done < "$dockerfile"
                   
