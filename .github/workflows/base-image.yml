@@ -51,7 +51,7 @@ jobs:
                   /etc/s6-overlay/s6-rc.d/init-setup/run'
 
           # Unique marker string to insert temporarily
-          MARKER="%%%__INSERT_CUSTOM_SED_COMMAND_HERE__%%%" # Made marker more unique
+          MARKER="%%%__INSERT_CUSTOM_SED_COMMAND_HERE__%%%"
 
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
@@ -93,8 +93,9 @@ jobs:
                       # Check if the marker is somehow already present (e.g., from a failed previous run)
                       elif grep -Fq "$MARKER" "$dockerfile"; then
                           echo "Marker '$MARKER' found in $dockerfile (likely from previous failed run). Attempting replacement..."
-                          # Prepare the insert text for sed 's' command (escape sed delimiters '#' and backslashes '\')
-                          ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\\#]/\\&/g' -e 's/\n/\\n/g')
+                          # --- CHANGE: Refined escaping for sed 's' replacement ---
+                          # Escape backslash '\', ampersand '&', and the delimiter '#'
+                          ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\&]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g')
                           # Use '#' as delimiter for the 's' command
                           sed -i "s#${MARKER}#${ESCAPED_INSERT_TEXT_FOR_S}#" "$dockerfile"
                           # Verification after replacing existing marker
@@ -115,8 +116,9 @@ jobs:
                           if grep -Fq "$MARKER" "$dockerfile"; then
                               echo "Marker inserted successfully. Replacing marker with actual command..."
                               # --- Step 2: Replace the marker ---
-                              # Prepare the insert text for sed 's' command (escape sed delimiters '#' and backslashes '\')
-                              ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\\#]/\\&/g' -e 's/\n/\\n/g')
+                              # --- CHANGE: Refined escaping for sed 's' replacement ---
+                              # Escape backslash '\', ampersand '&', and the delimiter '#'
+                              ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\&]/\\&/g' -e 's/\\/\\\\/g' -e 's/#/\\#/g')
                               # Use '#' as delimiter for the 's' command
                               sed -i "s#${MARKER}#${ESCAPED_INSERT_TEXT_FOR_S}#" "$dockerfile"
 
@@ -126,7 +128,8 @@ jobs:
                               else
                                   echo "ERROR: Failed to verify modification in $dockerfile after attempting marker replacement."
                                   echo "--- Content around marker in $dockerfile ---"
-                                  grep -C 5 "$MARKER" "$dockerfile" || echo "Marker not found during verification."
+                                  # Use grep -F to avoid regex interpretation of marker
+                                  grep -C 5 -F "$MARKER" "$dockerfile" || echo "Marker not found during verification."
                                   echo "-------------------------------------------"
                                   # exit 1 # Optionally exit if verification fails
                               fi
