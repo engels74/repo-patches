@@ -38,17 +38,20 @@ jobs:
           TARGET_REPO_OWNER="engels74"
           UPSTREAM_REPO_OWNER="hotio"
 
-          # Define the text block to append in Dockerfiles after the chmod line
-          # Starts with ' && \' and includes the multi-line sed command
+          # Define the text block to insert in Dockerfiles
+          # Use standard shell variable definition with appropriate escaping for the *final* Dockerfile content
           # Ensure internal single quotes are escaped as \x27
           # Ensure $ for shell command substitution inside Dockerfile is escaped as \$
           # Ensure backslashes for line continuation are present
-          DOCKERFILE_APPEND_TEXT=' && \\\
+          DOCKERFILE_INSERT_TEXT=' && \\\
               sed -i \x27/figlet/ s/hotio/engels74/; \\\
                       /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\\
                       /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\\
                       /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r \\x27.app\\x27 <<< "\$(base64 --decode <<< "\${IMAGE_STATS}")")/issues|\x27 \\\
                   /etc/s6-overlay/s6-rc.d/init-setup/run'
+
+          # Unique marker string to insert temporarily
+          MARKER="%%%__INSERT_CUSTOM_SED_COMMAND_HERE__%%%" # Made marker more unique
 
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
@@ -73,44 +76,62 @@ jobs:
                 echo "File not found: $CALL_BUILD (Skipping update)"
             fi
 
-            # 2b. Update Dockerfiles by appending sed command to the root-files RUN block
+            # 2b. Update Dockerfiles using a two-step marker insertion/replacement
             DOCKERFILE_AMD64="linux-amd64.Dockerfile"
             DOCKERFILE_ARM64="linux-arm64.Dockerfile"
-            # --- CHANGE: Simplified pattern to target the unique part of the line ---
-            TARGET_LINE_PATTERN='/etc/s6-overlay/init-hook'
-            # Pattern to check if modification already exists (checks for the script path)
-            MODIFICATION_CHECK_PATTERN='/etc/s6-overlay/s6-rc.d/init-setup/run'
+            TARGET_LINE_PATTERN='/etc/s6-overlay/init-hook' # Line to insert *after*
+            MODIFICATION_CHECK_PATTERN='/etc/s6-overlay/s6-rc.d/init-setup/run' # Pattern to verify success
 
-            echo "Attempting to update Dockerfiles..."
+            echo "Attempting to update Dockerfiles using marker method..."
             for dockerfile in "$DOCKERFILE_AMD64" "$DOCKERFILE_ARM64"; do
               if [[ -f "$dockerfile" ]]; then
-                  # Check if the target line pattern exists in the file
-                  # Use grep -F for fixed string matching, safer with special characters like '/'
+                  # Check if the target line pattern exists
                   if grep -Fq "$TARGET_LINE_PATTERN" "$dockerfile"; then
-                      # Check if the modification we want to add is already present
+                      # Check if the modification is already present
                       if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile"; then
-                          echo "Modification already seems present in $dockerfile. Skipping append."
-                      else
-                          echo "Target line pattern '$TARGET_LINE_PATTERN' found in $dockerfile. Appending modification..."
-                          # Escape backslashes in the append text variable for the sed 'a\' command
-                          # This is needed because 'a\' itself consumes one level of backslashes
-                          ESCAPED_APPEND_TEXT_FOR_A=$(printf '%s' "$DOCKERFILE_APPEND_TEXT" | sed 's/\\/\\\\/g')
-
-                          # Use sed 'a\' command to append the text block *after* the line containing the pattern
-                          # Use a different delimiter for the sed address (#) to avoid conflict with '/' in the pattern
-                          sed -i "\#${TARGET_LINE_PATTERN}#a\\${ESCAPED_APPEND_TEXT_FOR_A}" "$dockerfile"
-
-                          # === Verification Step ===
-                          # Use grep -F for fixed string matching here too
-                          if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile"; then
-                              echo "Successfully updated and verified $dockerfile"
+                          echo "Modification already seems present in $dockerfile. Skipping update."
+                      # Check if the marker is somehow already present (e.g., from a failed previous run)
+                      elif grep -Fq "$MARKER" "$dockerfile"; then
+                          echo "Marker '$MARKER' found in $dockerfile (likely from previous failed run). Attempting replacement..."
+                          # Prepare the insert text for sed 's' command (escape sed delimiters '#' and backslashes '\')
+                          ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\\#]/\\&/g' -e 's/\n/\\n/g')
+                          # Use '#' as delimiter for the 's' command
+                          sed -i "s#${MARKER}#${ESCAPED_INSERT_TEXT_FOR_S}#" "$dockerfile"
+                          # Verification after replacing existing marker
+                          if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile" && ! grep -Fq "$MARKER" "$dockerfile"; then
+                              echo "Successfully replaced existing marker and verified modification in $dockerfile."
                           else
-                              echo "ERROR: Failed to verify modification in $dockerfile after attempting append."
-                              echo "--- Lines around target in $dockerfile ---"
-                              # Use grep -F for fixed string matching here too
-                              grep -C 3 -F "$TARGET_LINE_PATTERN" "$dockerfile" || echo "Target pattern not found during verification."
-                              echo "-------------------------------------------"
-                              # exit 1 # Optionally exit if verification fails
+                              echo "ERROR: Failed to verify modification after replacing existing marker in $dockerfile."
+                              # exit 1 # Optional exit
+                          fi
+                      else
+                          # --- Step 1: Insert the marker ---
+                          echo "Target line pattern '$TARGET_LINE_PATTERN' found in $dockerfile. Inserting marker..."
+                          # Use '#' as delimiter for the address to avoid conflict with '/' in pattern
+                          # Append the marker on a new line after the matched line
+                          sed -i "\#${TARGET_LINE_PATTERN}#a ${MARKER}" "$dockerfile"
+
+                          # Verify marker insertion before proceeding
+                          if grep -Fq "$MARKER" "$dockerfile"; then
+                              echo "Marker inserted successfully. Replacing marker with actual command..."
+                              # --- Step 2: Replace the marker ---
+                              # Prepare the insert text for sed 's' command (escape sed delimiters '#' and backslashes '\')
+                              ESCAPED_INSERT_TEXT_FOR_S=$(printf '%s' "$DOCKERFILE_INSERT_TEXT" | sed -e 's/[\\#]/\\&/g' -e 's/\n/\\n/g')
+                              # Use '#' as delimiter for the 's' command
+                              sed -i "s#${MARKER}#${ESCAPED_INSERT_TEXT_FOR_S}#" "$dockerfile"
+
+                              # === Verification Step ===
+                              if grep -Fq "$MODIFICATION_CHECK_PATTERN" "$dockerfile" && ! grep -Fq "$MARKER" "$dockerfile"; then
+                                  echo "Successfully inserted marker, replaced it, and verified modification in $dockerfile"
+                              else
+                                  echo "ERROR: Failed to verify modification in $dockerfile after attempting marker replacement."
+                                  echo "--- Content around marker in $dockerfile ---"
+                                  grep -C 5 "$MARKER" "$dockerfile" || echo "Marker not found during verification."
+                                  echo "-------------------------------------------"
+                                  # exit 1 # Optionally exit if verification fails
+                              fi
+                          else
+                              echo "ERROR: Failed to insert marker '$MARKER' into $dockerfile after command execution."
                           fi
                       fi
                   else
