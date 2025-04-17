@@ -120,3 +120,20 @@ jobs:
           done
           
           echo "All specified branches processed."
+
+      - name: Checkout Repo Patches Repository
+        uses: actions/checkout@v4
+        with:
+          repository: engels74/repo-patches
+          token: ${{ secrets.GH_PAT }}
+          path: repo-patches
+          ref: main
+
+      - name: Create and Push Empty Commit to Repo Patches
+        working-directory: ./repo-patches
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: Trigger downstream workflows [skip ci]"
+          git push origin main
+          echo "Empty commit pushed to engels74/repo-patches on branch main."
