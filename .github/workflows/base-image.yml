@@ -2,7 +2,6 @@
 
 name: Sync and Update Specific Branches from Upstream
 
-# Allow manual triggering
 on:
   workflow_dispatch:
 
@@ -31,74 +30,64 @@ jobs:
 
       - name: Process Branches in base-image
         run: |
-          set -e # Exit immediately if a command exits with a non-zero status.
+          set -e
 
           BRANCHES_TO_SYNC="alpinevpn jammyvpn noblevpn"
           TARGET_REPO_OWNER="engels74"
           UPSTREAM_REPO_OWNER="hotio"
 
-          # Define the text block to append in Dockerfiles after the chmod line
-          # Use single quotes for the outer shell variable to prevent premature expansion
-          # Escape internal single quotes with \x27 for sed
-          # Escape backslashes needed by sed 'a\' command and line continuation
-          # Escape the $ in $(jq...) so it's interpreted inside the Dockerfile RUN, not by the workflow shell
-          # Ensure indentation within this variable matches the desired Dockerfile format
-          export DOCKERFILE_APPEND_TEXT=' && \\\
-              sed -i \x27/figlet/ s/hotio/engels74/; \\\
-                      /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\\
-                      /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\\
-                      /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r \\x27.app\\x27 <<< "$(base64 --decode <<< "${IMAGE_STATS}")")/issues|\x27 \\\
-                  /etc/s6-overlay/s6-rc.d/init-setup/run'
-
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
 
-            # 1. Checkout the branch
-            echo "Checking out and resetting local branch '$branch' to 'upstream/$branch'..."
             git checkout -B "$branch" "upstream/$branch"
             if [ $? -ne 0 ]; then
               echo "Error checking out or resetting branch $branch from upstream/$branch. Skipping."
               continue
             fi
 
-            # 2. Run the modification script logic directly
             echo "Applying modifications to files on branch '$branch'..."
 
-            # 2a. Update .github/workflows/call-build.yml
+            # 1. Update .github/workflows/call-build.yml
             CALL_BUILD=".github/workflows/call-build.yml"
             if [[ -f "$CALL_BUILD" ]]; then
-                # Use a different delimiter like '#' for sed to avoid issues with slashes in paths
                 sed -i 's|hotio/build-workflow/.github/workflows/build-on-call.yml@master|engels74/docker-build-workflow/.github/workflows/build-on-call.yml@master|' "$CALL_BUILD"
                 echo "Updated $CALL_BUILD"
             else
                 echo "File not found: $CALL_BUILD (Skipping update)"
             fi
 
-            # 2b. Update Dockerfiles by appending sed command to the root-files RUN block
-            DOCKERFILE_AMD64="linux-amd64.Dockerfile"
-            DOCKERFILE_ARM64="linux-arm64.Dockerfile"
-            # Regex pattern for the line *after which* to append the text
-            # Matches the line exactly, including indentation
-            TARGET_LINE_PATTERN='^    chmod \+x /etc/s6-overlay/init-hook$'
+            # 2. Update both Dockerfiles at root
+            for DOCKERFILE in linux-amd64.Dockerfile linux-arm64.Dockerfile; do
+              if [[ -f "$DOCKERFILE" ]]; then
+                echo "Modifying $DOCKERFILE..."
 
-            echo "Attempting to update Dockerfiles..."
-            for dockerfile in "$DOCKERFILE_AMD64" "$DOCKERFILE_ARM64"; do
-              if [[ -f "$dockerfile" ]]; then
-                  # Check if the modification is already present to avoid duplicate appends
-                  if grep -q '/etc/s6-overlay/s6-rc.d/init-setup/run' "$dockerfile"; then
-                      echo "Modification already seems present in $dockerfile. Skipping append."
-                  else
-                      # Use '#' as delimiter for sed address to avoid escaping slashes
-                      # Use the 'a\' command to append the exported text block *after* the matched line
-                      sed -i '\#'"$TARGET_LINE_PATTERN"'#a\'"$DOCKERFILE_APPEND_TEXT" "$dockerfile"
-                      echo "Updated $dockerfile"
-                  fi
+                # Use awk to replace the block between '# install root-files' and 'chmod +x /etc/s6-overlay/init-hook'
+                awk '
+                  BEGIN {in_block=0}
+                  /^# install root-files/ {print; in_block=1; next}
+                  in_block && /^RUN curl -fsSL "https:\/\/github.com\/hotio\/root-files-archive\/\$\{VERSION_ROOT_FILES\}.tar.gz"/ {next}
+                  in_block && /chmod \+x \/etc\/s6-overlay\/init-hook/ {
+                    # Output the new block
+                    print "RUN curl -fsSL \"https://github.com/hotio/root-files/archive/${VERSION_ROOT_FILES}.tar.gz\" | tar zpxf - -C / \"root-files-${VERSION_ROOT_FILES}/root\" --strip-components=2 && \\"
+                    print "    chmod +x /etc/s6-overlay/init-hook && \\"
+                    print "    sed -i '/figlet/ s/hotio/engels74/; \\"
+                    print "            /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\"
+                    print "            /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\"
+                    print "            /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r \x27.app\x27 <<< \"$(base64 --decode <<< \"${IMAGE_STATS}\")\")/issues|' \\"
+                    print "        /etc/s6-overlay/s6-rc.d/init-setup/run"
+                    in_block=0
+                    next
+                  }
+                  !in_block {print}
+                ' "$DOCKERFILE" > "${DOCKERFILE}.tmp" && mv "${DOCKERFILE}.tmp" "$DOCKERFILE"
+
+                echo "Updated $DOCKERFILE"
               else
-                  echo "File not found: $dockerfile (Skipping update)"
+                echo "File not found: $DOCKERFILE (Skipping update)"
               fi
             done
 
-            # 2c. Overwrite README.md using printf (YAML safe)
+            # 3. Overwrite README.md using printf
             README="README.md"
             echo "Overwriting $README using printf..."
             printf '%s\n' \
@@ -109,14 +98,12 @@ jobs:
               'Detailed information and documentation available on the [master branch README](https://github.com/engels74/base-image/tree/master).' > "$README"
             echo "Overwritten $README"
 
-            # 3. Commit the changes if any
+            # 4. Commit the changes if any
             echo "Checking for changes on branch '$branch'..."
             if [[ -n $(git status --porcelain) ]]; then
               echo "Changes detected. Committing..."
               git add .
               git commit -m "Sync with upstream ($UPSTREAM_REPO_OWNER/base@$branch) and apply custom updates"
-
-              # 4. Force push the changes
               echo "Force pushing branch '$branch' to origin..."
               git push origin "$branch" --force
             else
@@ -124,7 +111,7 @@ jobs:
             fi
 
             echo "--- Finished processing branch: $branch ---"
-            echo "" # Add a newline for readability
+            echo ""
           done
 
           echo "All specified branches processed."
