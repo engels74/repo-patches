@@ -29,7 +29,7 @@ jobs:
         run: |
           set -e # Exit immediately if a command exits with a non-zero status.
           
-          BRANCHES_TO_SYNC="alpinevpn jammyvpn noblevpn"
+          BRANCHES_TO_SYNC="alpinevpn noblevpn"
           TARGET_REPO_OWNER="engels74"
           UPSTREAM_REPO_OWNER="hotio"
           
