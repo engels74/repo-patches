@@ -59,11 +59,10 @@ jobs:
             # 2b. Patch root/etc/s6-overlay/s6-rc.d/init-setup/run with engels74 branding
             INIT_SETUP="root/etc/s6-overlay/s6-rc.d/init-setup/run"
             if [[ -f "$INIT_SETUP" ]]; then
-                sed -i '/figlet/ s/hotio/engels74/; \
-                        /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \
-                        /Documentation:/ s|https://hotio.dev|https://engels74.net|; \
-                        /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r '"'"'.app'"'"' <<< "\$(base64 --decode <<< "\${IMAGE_STATS}")")/issues|' \
-                    "$INIT_SETUP"
+                sed -i '/figlet/ s/hotio/engels74/' "$INIT_SETUP"
+                sed -i '/Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|' "$INIT_SETUP"
+                sed -i '/Documentation:/ s|https://hotio.dev|https://engels74.net|' "$INIT_SETUP"
+                sed -i '/Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r '"'"'.app'"'"' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")/issues|' "$INIT_SETUP"
                 echo "Patched $INIT_SETUP with engels74 branding"
             else
                 echo "Warning: $INIT_SETUP not found. Skipping branding patch."
