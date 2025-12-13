@@ -62,7 +62,7 @@ jobs:
                 sed -i '/figlet/ s/hotio/engels74/; \
                         /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \
                         /Documentation:/ s|https://hotio.dev|https://engels74.net|; \
-                        /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r '"'"'.app'"'"' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")/issues|' \
+                        /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r '"'"'.app'"'"' <<< "\$(base64 --decode <<< "\${IMAGE_STATS}")")/issues|' \
                     "$INIT_SETUP"
                 echo "Patched $INIT_SETUP with engels74 branding"
             else
