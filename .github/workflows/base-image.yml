@@ -27,26 +27,26 @@ jobs:
 
       - name: Sync and Apply Custom Updates
         run: |
-          set -e # Exit immediately if a command exits with a non-zero status.
-          
+          set -e
+
           BRANCHES_TO_SYNC="alpinevpn noblevpn"
           TARGET_REPO_OWNER="engels74"
           UPSTREAM_REPO_OWNER="hotio"
-          
+
           for branch in $BRANCHES_TO_SYNC; do
             echo "--- Processing branch: $branch ---"
-            
-            # 1. Checkout the branch
+
+            # 1. Hard reset to upstream
             echo "Checking out and resetting local branch '$branch' to 'upstream/$branch'..."
             git checkout -B "$branch" "upstream/$branch"
             if [ $? -ne 0 ]; then
               echo "Error checking out or resetting branch $branch from upstream/$branch. Skipping."
               continue
             fi
-            
+
             # 2. Apply modifications to files
             echo "Applying modifications to files on branch '$branch'..."
-            
+
             # 2a. Update .github/workflows/call-build.yml
             CALL_BUILD=".github/workflows/call-build.yml"
             if [[ -f "$CALL_BUILD" ]]; then
@@ -55,44 +55,23 @@ jobs:
             else
                 echo "File not found: $CALL_BUILD (Skipping update)"
             fi
-            
-            # 2b. Update Dockerfiles using a more reliable approach
-            echo "Modifying Dockerfiles..."
-            for dockerfile in "linux-amd64.Dockerfile" "linux-arm64.Dockerfile"; do
-              if [[ -f "$dockerfile" ]]; then
-                # Check if the modification is already present
-                if grep -q "/etc/s6-overlay/s6-rc.d/init-setup/run" "$dockerfile"; then
-                  echo "Modification already present in $dockerfile. Skipping."
-                else
-                  # Create a temporary file with line-by-line approach
-                  NEW_CONTENT=""
-                  while IFS= read -r line; do
-                    if [[ "$line" == *"chmod +x /etc/s6-overlay/init-hook"* ]]; then
-                      # Append to this line without adding a newline
-                      NEW_CONTENT+="$line && \\"$'\n'
-                      NEW_CONTENT+="    sed -i '/figlet/ s/hotio/engels74/; \\"$'\n'
-                      NEW_CONTENT+="            /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \\"$'\n'
-                      NEW_CONTENT+="            /Documentation:/ s|https://hotio.dev|https://engels74.net|; \\"$'\n'
-                      NEW_CONTENT+="            /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/\$(jq -r '"'"'.app'"'"' <<< \"\$(base64 --decode <<< \"\${IMAGE_STATS}\")\")\/issues|' \\"$'\n'
-                      NEW_CONTENT+="        /etc/s6-overlay/s6-rc.d/init-setup/run"$'\n'
-                    else
-                      # Add other lines normally
-                      NEW_CONTENT+="$line"$'\n'
-                    fi
-                  done < "$dockerfile"
-                  
-                  # Replace the original file
-                  echo -n "$NEW_CONTENT" > "$dockerfile"
-                  echo "Successfully modified $dockerfile"
-                fi
-              else
-                echo "File not found: $dockerfile (Skipping update)"
-              fi
-            done
-            
-            # 2c. Overwrite README.md using printf (YAML safe)
+
+            # 2b. Patch root/etc/s6-overlay/s6-rc.d/init-setup/run with engels74 branding
+            INIT_SETUP="root/etc/s6-overlay/s6-rc.d/init-setup/run"
+            if [[ -f "$INIT_SETUP" ]]; then
+                sed -i '/figlet/ s/hotio/engels74/; \
+                        /Donate:/ s|https://hotio.dev/donate|https://engels74.net/donate|; \
+                        /Documentation:/ s|https://hotio.dev|https://engels74.net|; \
+                        /Support:/ s|https://hotio.dev/discord|https://github.com/engels74/$(jq -r '"'"'.app'"'"' <<< "$(base64 --decode <<< "${IMAGE_STATS}")")/issues|' \
+                    "$INIT_SETUP"
+                echo "Patched $INIT_SETUP with engels74 branding"
+            else
+                echo "Warning: $INIT_SETUP not found. Skipping branding patch."
+            fi
+
+            # 2c. Overwrite README.md
             README="README.md"
-            echo "Overwriting $README using printf..."
+            echo "Overwriting $README..."
             printf '%s\n' \
               '# base-image (engels74)' \
               '' \
@@ -100,25 +79,25 @@ jobs:
               '' \
               'Detailed information and documentation available on the [master branch README](https://github.com/engels74/base-image/tree/master).' > "$README"
             echo "Overwritten $README"
-            
+
             # 3. Commit the changes if any
             echo "Checking for changes on branch '$branch'..."
             if [[ -n $(git status --porcelain) ]]; then
               echo "Changes detected. Committing..."
               git add .
               git commit -m "Sync with upstream ($UPSTREAM_REPO_OWNER/base@$branch) and apply custom updates"
-              
+
               # 4. Force push the changes
               echo "Force pushing branch '$branch' to origin..."
               git push origin "$branch" --force
             else
               echo "No changes detected on branch '$branch' after modifications."
             fi
-            
+
             echo "--- Finished processing branch: $branch ---"
             echo ""
           done
-          
+
           echo "All specified branches processed."
 
       - name: Checkout Repo Patches Repository
