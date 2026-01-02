@@ -26,7 +26,7 @@ jobs:
       # STEP 1: Checkout target repository (engels74/hweb)
       # ============================================================
       - name: Checkout Target Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ env.TARGET_REPO }}
           token: ${{ secrets.GH_PAT }}
@@ -37,7 +37,7 @@ jobs:
       # STEP 2: Checkout repo-patches for custom content
       # ============================================================
       - name: Checkout Repo Patches
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: engels74/repo-patches
           token: ${{ secrets.GH_PAT }}
