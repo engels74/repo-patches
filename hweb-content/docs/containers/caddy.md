@@ -11,8 +11,6 @@ hide:
 
     A Docker image with [Caddy 2](https://caddyserver.com){: target=_blank rel="noopener" } including DNS modules for [Cloudflare](https://github.com/caddy-dns/cloudflare){: target=_blank rel="noopener" }, [Njalla](https://github.com/caddy-dns/njalla){: target=_blank rel="noopener" }, and [rate limiting](https://github.com/mholt/caddy-ratelimit){: target=_blank rel="noopener" }. The default configuration restricts access to private IP ranges only.
 
-    **Note:** The Njalla DNS module uses a [custom build](https://github.com/engels74/libdns-njalla) pending the merge of [this upstream PR](https://github.com/libdns/njalla/pull/2). 
-
 ## Starting the container
 
 === "cli"

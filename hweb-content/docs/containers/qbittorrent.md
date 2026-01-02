@@ -11,9 +11,9 @@ hide:
 
     This is a fork of Hotio's [qBittorrent](https://hotio.dev/containers/qbittorrent) Docker image, that uses [libtorrent v2.x](https://github.com/userdocs/qbittorrent-nox-static/releases) by default.
     
-    Hotio [recently]() added the option to define by ENV if you want to use libtorrent v1 or v2. This one uses `v2` by default.
+    Hotio [recently](https://github.com/hotio/qbittorrent/commit/e8dada05befebf51d73669a05b09ef046c6f69e6) added the option to define by ENV if you want to use libtorrent v1 or v2. This one uses `v2` by default.
     
-    This also still includes VueTorrent in the image.
+    This also still includes VueTorrent in the image, as hotio also removed support for themes.
 
 ## Starting the container
 
