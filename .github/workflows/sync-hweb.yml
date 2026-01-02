@@ -101,6 +101,10 @@ jobs:
             "patches/hweb-content/docs/containers/qflood.md"
             "patches/hweb-content/docs/containers/sabnzbd.md"
             "patches/hweb-content/docs/containers/tgraph-bot.md"
+            "patches/hweb-content/docs/javascripts/loadJSON.js"
+            "patches/hweb-content/docs/overrides/main.html"
+            "patches/hweb-content/includes/header-links.md"
+            "patches/hweb-content/includes/tags.md"
             "patches/hweb-content/assets/img/engels74.svg"
           )
 
@@ -279,6 +283,27 @@ jobs:
 
           echo ""
           echo "Custom documentation copied successfully."
+
+          # Copy custom JavaScript files
+          echo ""
+          echo "Copying custom JavaScript..."
+          mkdir -p target/docs/javascripts
+          cp -v patches/hweb-content/docs/javascripts/loadJSON.js target/docs/javascripts/loadJSON.js
+
+          # Copy custom overrides
+          echo ""
+          echo "Copying custom overrides..."
+          mkdir -p target/docs/overrides
+          cp -v patches/hweb-content/docs/overrides/main.html target/docs/overrides/main.html
+
+          # Copy custom include files (replace upstream versions)
+          echo ""
+          echo "Copying custom includes..."
+          cp -v patches/hweb-content/includes/header-links.md target/includes/header-links.md
+          cp -v patches/hweb-content/includes/tags.md target/includes/tags.md
+
+          echo ""
+          echo "All custom files copied successfully."
 
       # ============================================================
       # STEP 12: Copy custom assets (logos, images)
@@ -480,6 +505,8 @@ jobs:
             "docs/containers/sabnzbd.md"
             "docs/containers/tgraph-bot.md"
             "docs/img/engels74.svg"
+            "docs/javascripts/loadJSON.js"
+            "docs/overrides/main.html"
             "includes/annotations.md"
             "includes/tags.md"
             "includes/wireguard.md"
