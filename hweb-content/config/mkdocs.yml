@@ -1,0 +1,79 @@
+copyright: Copyright &copy; 2023-2024 engels74<br>Based on <a href="https://hotio.dev">hotio.dev</a>. Logos based on work by <a href="https://www.flaticon.com/authors/freepik">Freepik</a> from <a href="https://www.flaticon.com">flaticon.com</a> and <a href="https://freeicons.io/profile/6200">Soni Sokell</a> on <a href="https://freeicons.io">freeicons.io</a>
+edit_uri: 'hweb/edit/master/docs'
+
+extra:
+  social:
+  - icon: fontawesome/solid/heart
+    link: 'https://github.com/sponsors/mrhotio'
+    name: Donate to Hotio
+  - icon: fontawesome/brands/github
+    link: 'https://github.com/engels74'
+    name: GitHub
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js
+  - javascripts/loadJSON.js
+
+plugins:
+  - search
+
+repo_name: engels74
+repo_url: https://github.com/engels74
+site_author: engels74
+site_description: Documentation for Docker images maintained by engels74.
+site_name: engels74.net
+site_url: https://engels74.net
+
+theme:
+  icon:
+    repo: fontawesome/brands/github
+  favicon: img/favicon.ico
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+  language: en
+  logo: img/engels74.svg
+  name: material
+  palette:
+    scheme: hotio
+  custom_dir: docs/overrides
+
+markdown_extensions:
+  - pymdownx.details
+  - pymdownx.snippets
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - toc:
+      permalink: true
+  - admonition
+
+nav:
+- Home: index.md
+- Containers:
+  - Base Images:
+    - engels74/base-image: containers/base-image.md
+  - Apps:
+    - engels74/caddy: containers/caddy.md
+    - engels74/overseerr-anime: containers/overseerr-anime.md
+    - engels74/qbittorrent: containers/qbittorrent.md
+    - engels74/qflood: containers/qflood.md
+    - engels74/sabnzbd: containers/sabnzbd.md
+  - engels74:
+    - engels74/obzorarr: containers/obzorarr.md
+    - engels74/tgraph-bot: containers/tgraph-bot.md
+- FAQ: faq.md
