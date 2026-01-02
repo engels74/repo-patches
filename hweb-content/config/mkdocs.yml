@@ -30,7 +30,7 @@ site_url: https://engels74.net
 theme:
   icon:
     repo: fontawesome/brands/github
-  favicon: img/favicon.ico
+  favicon: img/engels74.svg
   features:
     - navigation.instant
     - navigation.tabs
