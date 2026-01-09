@@ -8,7 +8,7 @@ This repository contains GitHub Actions workflows and modular content for syncin
 Syncs the `engels74/base-image` repository with upstream `hotio/base`, applying branding modifications.
 
 ### `sync-hweb.yml`
-Syncs the `engels74/hweb` documentation website with upstream `hotio/website`, applying comprehensive customizations including:
+Syncs the `engels74/website` documentation website with upstream `hotio/website`, applying comprehensive customizations including:
 - Custom navigation structure
 - Container documentation for engels74's forks
 - Branding and URL replacements
@@ -23,24 +23,34 @@ Syncs the `engels74/hweb` documentation website with upstream `hotio/website`, a
 ```
 hweb-content/
 ├── config/
-│   └── mkdocs.yml          # Custom MkDocs configuration
+│   └── mkdocs.yml              # Custom MkDocs configuration
 ├── docs/
-│   ├── index.md            # Custom homepage
-│   ├── faq.md              # FAQ with redirect to hotio.dev
-│   ├── CNAME               # Domain configuration
-│   └── containers/         # Container documentation
+│   ├── index.md                # Custom homepage
+│   ├── faq.md                  # FAQ with redirect to hotio.dev
+│   ├── CNAME                   # Domain configuration
+│   ├── overrides/
+│   │   └── main.html           # Theme overrides (favicon, fonts)
+│   └── containers/             # Container documentation
 │       ├── base-image.md
+│       ├── base-image-tags.json
 │       ├── caddy.md
+│       ├── caddy-tags.json
 │       ├── obzorarr.md
+│       ├── obzorarr-tags.json
 │       ├── overseerr-anime.md
+│       ├── overseerr-anime-tags.json
 │       ├── qbittorrent.md
+│       ├── qbittorrent-tags.json
 │       ├── qflood.md
+│       ├── qflood-tags.json
 │       ├── sabnzbd.md
-│       └── tgraph-bot.md
+│       ├── sabnzbd-tags.json
+│       ├── tgraph-bot.md
+│       └── tgraph-bot-tags.json
 └── assets/
     └── img/
-        ├── engels74.svg    # Custom branding logo
-        └── image-logos/    # Container logos
+        ├── engels74.svg        # Custom branding logo
+        └── image-logos/        # Container logos
 ```
 
 ---
@@ -126,25 +136,19 @@ This document explains what content is modularized in `hweb-content/` and why ea
 | File | Reason to Keep Upstream |
 |------|------------------------|
 | `annotations.md` | VPN environment variable annotations - generic, works for all containers |
-| `header-links.md` | Template for GitHub/ghcr.io links - works with any org name |
-| `tags.md` | Dynamic tags table template - fetches from respective repos |
 | `wireguard.md` | VPN configuration examples - generic across all containers |
 
-**Why not modularize?** These snippets use `--8<--` syntax and work identically for both hotio and engels74 containers. The `header-links.md` dynamically generates links based on the container name in the H1 heading.
+**Why not modularize?** These snippets use `--8<--` syntax and work identically for both hotio and engels74 containers.
 
-### 2. Stylesheets (`docs/stylesheets/extra.css`)
+### 2. Stylesheets (`docs/stylesheets/extra-13.css`)
 
 **Why not modularize?** The "hotio" color scheme is shared. Engels74 uses the same dark theme with orange accents.
 
-### 3. JavaScript (`docs/javascripts/loadJSON.js`)
+### 3. JavaScript (`docs/javascripts/tablesort.js`, `tagcopy.js`)
 
-**Why not modularize?** The script dynamically loads `tags.json` and `links.json` from the respective container repositories. It works with any GitHub organization because it parses the container name from the page.
+**Why not modularize?** These scripts handle table column sorting and click-to-copy functionality for tags. They work with any pre-rendered HTML tags table.
 
-### 4. Theme Overrides (`docs/overrides/main.html`)
-
-**Why not modularize?** Contains only theme color and font imports, which are identical for both sites.
-
-### 5. VPN Banner Images
+### 4. VPN Banner Images
 
 **Why not modularize?** Affiliate banners for ProtonVPN and PIA are shared with hotio. Same affiliate links benefit both.
 
@@ -176,19 +180,20 @@ This document explains what content is modularized in `hweb-content/` and why ea
 1. `mkdocs.yml` - Complete replacement with custom navigation
 2. `docs/index.md` - Custom homepage
 3. `docs/faq.md` - Custom FAQ with redirect
-4. `docs/containers/*.md` - All 8 container docs
-5. `docs/CNAME` - Domain configuration
-6. `docs/img/engels74.svg` - Custom logo
+4. `docs/containers/*.md` - All 8 container docs (pre-rendered HTML tables)
+5. `docs/containers/*-tags.json` - All 8 container tag metadata files
+6. `docs/CNAME` - Domain configuration
+7. `docs/img/engels74.svg` - Custom logo
+8. `overrides/main.html` - Custom favicon and font configuration
 
 ### What Gets Preserved from Upstream
 
-1. `includes/*.md` - All include snippets
-2. `docs/stylesheets/extra.css` - Theme styles
-3. `docs/javascripts/loadJSON.js` - Dynamic content loader
-4. `docs/overrides/main.html` - Theme overrides
-5. VPN affiliate banners
-6. Favicon
-7. Core image logos for kept containers
+1. `includes/annotations.md`, `includes/wireguard.md` - VPN snippets
+2. `docs/stylesheets/extra-13.css` - Theme styles
+3. `docs/javascripts/tablesort.js`, `tagcopy.js` - Table sorting and copy-to-clipboard
+4. VPN affiliate banners
+5. Favicon
+6. Core image logos for kept containers
 
 ---
 
@@ -205,4 +210,4 @@ The workflow implements fail-fast behavior:
 
 ## Secrets Required
 
-- `GH_PAT`: Personal Access Token with `repo` scope for pushing to `engels74/hweb`
+- `GH_PAT`: Personal Access Token with `repo` scope for pushing to `engels74/website`

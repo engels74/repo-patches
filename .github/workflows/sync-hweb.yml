@@ -13,7 +13,7 @@ on:
     - cron: '0 0 * * 0'
 
 env:
-  TARGET_REPO: engels74/hweb
+  TARGET_REPO: engels74/website
   UPSTREAM_REPO: hotio/website
   UPSTREAM_BRANCH: master
   TARGET_BRANCH: master
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ============================================================
-      # STEP 1: Checkout target repository (engels74/hweb)
+      # STEP 1: Checkout target repository (engels74/website)
       # ============================================================
       - name: Checkout Target Repository
         uses: actions/checkout@v6
@@ -718,5 +718,5 @@ jobs:
           echo "Upstream Repository: ${{ env.UPSTREAM_REPO }}"
           echo "Dry Run: ${{ inputs.dry_run }}"
           echo ""
-          echo "The engels74-hweb documentation site has been synced with upstream and customized."
+          echo "The engels74 website has been synced with upstream and customized."
           echo "Deployment will be triggered automatically by the GitHub Pages workflow in the target repo."
