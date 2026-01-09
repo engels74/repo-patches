@@ -34,6 +34,46 @@ jobs:
           path: target
 
       # ============================================================
+      # STEP 1b: Save existing tags.json files before reset
+      # ============================================================
+      # These contain real commit SHAs populated by build workflows.
+      # We save them so they don't get overwritten by template values.
+      - name: Save Existing Tags JSON
+        working-directory: ./target
+        run: |
+          set -e
+          echo "============================================"
+          echo "Saving existing tags.json files..."
+          echo "============================================"
+
+          mkdir -p /tmp/saved-tags
+
+          CONTAINERS=(
+            "base-image"
+            "caddy"
+            "obzorarr"
+            "overseerr-anime"
+            "qbittorrent"
+            "qflood"
+            "sabnzbd"
+            "tgraph-bot"
+          )
+
+          for container in "${CONTAINERS[@]}"; do
+            src="docs/containers/${container}-tags.json"
+            if [[ -f "$src" ]]; then
+              cp -v "$src" "/tmp/saved-tags/"
+              echo "Saved: ${container}-tags.json"
+            else
+              echo "INFO: ${container}-tags.json not found (will use template)"
+            fi
+          done
+
+          echo ""
+          echo "Saved tags.json files:"
+          ls -la /tmp/saved-tags/ 2>/dev/null || echo "(none)"
+
+      # ============================================================
       # STEP 2: Checkout repo-patches for custom content
       # ============================================================
       - name: Checkout Repo Patches
@@ -316,13 +356,19 @@ jobs:
               exit 1
             fi
 
-            # Copy -tags.json file
-            src_json="patches/hweb-content/docs/containers/${container}-tags.json"
+            # Restore saved -tags.json file OR use template as fallback
+            # Saved files contain real commit SHAs from build workflows
+            saved_json="/tmp/saved-tags/${container}-tags.json"
+            patch_json="patches/hweb-content/docs/containers/${container}-tags.json"
             dst_json="target/docs/containers/${container}-tags.json"
-            if [[ -f "$src_json" ]]; then
-              cp -v "$src_json" "$dst_json"
+            if [[ -f "$saved_json" ]]; then
+              cp -v "$saved_json" "$dst_json"
+              echo "Restored saved tags.json for ${container}"
+            elif [[ -f "$patch_json" ]]; then
+              cp -v "$patch_json" "$dst_json"
+              echo "WARNING: Using template tags.json for ${container} (no saved version)"
             else
-              echo "ERROR: Source file not found: $src_json"
+              echo "ERROR: No tags.json available for ${container}"
               exit 1
             fi
           done
