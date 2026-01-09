@@ -93,6 +93,7 @@ jobs:
             "patches/hweb-content/docs/index.md"
             "patches/hweb-content/docs/faq.md"
             "patches/hweb-content/docs/CNAME"
+            # Container documentation (8 files)
             "patches/hweb-content/docs/containers/base-image.md"
             "patches/hweb-content/docs/containers/caddy.md"
             "patches/hweb-content/docs/containers/obzorarr.md"
@@ -101,10 +102,18 @@ jobs:
             "patches/hweb-content/docs/containers/qflood.md"
             "patches/hweb-content/docs/containers/sabnzbd.md"
             "patches/hweb-content/docs/containers/tgraph-bot.md"
-            "patches/hweb-content/docs/javascripts/loadJSON.js"
+            # Container tags JSON (8 files)
+            "patches/hweb-content/docs/containers/base-image-tags.json"
+            "patches/hweb-content/docs/containers/caddy-tags.json"
+            "patches/hweb-content/docs/containers/obzorarr-tags.json"
+            "patches/hweb-content/docs/containers/overseerr-anime-tags.json"
+            "patches/hweb-content/docs/containers/qbittorrent-tags.json"
+            "patches/hweb-content/docs/containers/qflood-tags.json"
+            "patches/hweb-content/docs/containers/sabnzbd-tags.json"
+            "patches/hweb-content/docs/containers/tgraph-bot-tags.json"
+            # Overrides
             "patches/hweb-content/docs/overrides/main.html"
-            "patches/hweb-content/includes/header-links.md"
-            "patches/hweb-content/includes/tags.md"
+            # Assets
             "patches/hweb-content/assets/img/engels74.svg"
           )
 
@@ -131,9 +140,9 @@ jobs:
           echo "All required patch files verified successfully."
 
       # ============================================================
-      # STEP 7: Delete unwanted container documentation
+      # STEP 7: Delete unwanted container documentation and tags
       # ============================================================
-      - name: Delete Unwanted Container Docs
+      - name: Delete Unwanted Container Docs and Tags
         working-directory: ./target
         run: |
           set -e
@@ -154,23 +163,50 @@ jobs:
             ["tgraph-bot.md"]=1
           )
 
-          DELETED_COUNT=0
+          # Tags JSON to keep (same 8 containers)
+          declare -A TAGS_JSON_TO_KEEP=(
+            ["base-image-tags.json"]=1
+            ["caddy-tags.json"]=1
+            ["obzorarr-tags.json"]=1
+            ["overseerr-anime-tags.json"]=1
+            ["qbittorrent-tags.json"]=1
+            ["qflood-tags.json"]=1
+            ["sabnzbd-tags.json"]=1
+            ["tgraph-bot-tags.json"]=1
+          )
+
+          DELETED_MD=0
+          DELETED_JSON=0
+
           if [[ -d "docs/containers" ]]; then
+            # Delete unwanted .md files
             for filepath in docs/containers/*.md; do
               if [[ -f "$filepath" ]]; then
                 filename=$(basename "$filepath")
                 if [[ -z "${CONTAINERS_TO_KEEP[$filename]}" ]]; then
                   rm -v "$filepath"
-                  DELETED_COUNT=$((DELETED_COUNT + 1))
+                  DELETED_MD=$((DELETED_MD + 1))
                 else
                   echo "Keeping: $filename"
+                fi
+              fi
+            done
+
+            # Delete unwanted -tags.json files
+            for filepath in docs/containers/*-tags.json; do
+              if [[ -f "$filepath" ]]; then
+                filename=$(basename "$filepath")
+                if [[ -z "${TAGS_JSON_TO_KEEP[$filename]}" ]]; then
+                  rm -v "$filepath"
+                  DELETED_JSON=$((DELETED_JSON + 1))
                 fi
               fi
             done
           fi
 
           echo ""
-          echo "Deleted $DELETED_COUNT unwanted container doc(s)."
+          echo "Deleted $DELETED_MD unwanted container doc(s)."
+          echo "Deleted $DELETED_JSON unwanted tags.json file(s)."
 
       # ============================================================
       # STEP 8: Delete scripts folder entirely
@@ -255,28 +291,38 @@ jobs:
           # Ensure containers directory exists
           mkdir -p target/docs/containers
 
-          # Copy all container documentation
+          # Copy all container documentation and tags JSON
           CONTAINERS=(
-            "base-image.md"
-            "caddy.md"
-            "obzorarr.md"
-            "overseerr-anime.md"
-            "qbittorrent.md"
-            "qflood.md"
-            "sabnzbd.md"
-            "tgraph-bot.md"
+            "base-image"
+            "caddy"
+            "obzorarr"
+            "overseerr-anime"
+            "qbittorrent"
+            "qflood"
+            "sabnzbd"
+            "tgraph-bot"
           )
 
           echo ""
-          echo "Copying container documentation..."
+          echo "Copying container documentation and tags..."
           for container in "${CONTAINERS[@]}"; do
-            src="patches/hweb-content/docs/containers/$container"
-            dst="target/docs/containers/$container"
-
-            if [[ -f "$src" ]]; then
-              cp -v "$src" "$dst"
+            # Copy .md file
+            src_md="patches/hweb-content/docs/containers/${container}.md"
+            dst_md="target/docs/containers/${container}.md"
+            if [[ -f "$src_md" ]]; then
+              cp -v "$src_md" "$dst_md"
             else
-              echo "ERROR: Source file not found: $src"
+              echo "ERROR: Source file not found: $src_md"
+              exit 1
+            fi
+
+            # Copy -tags.json file
+            src_json="patches/hweb-content/docs/containers/${container}-tags.json"
+            dst_json="target/docs/containers/${container}-tags.json"
+            if [[ -f "$src_json" ]]; then
+              cp -v "$src_json" "$dst_json"
+            else
+              echo "ERROR: Source file not found: $src_json"
               exit 1
             fi
           done
@@ -284,23 +330,14 @@ jobs:
           echo ""
           echo "Custom documentation copied successfully."
 
-          # Copy custom JavaScript files
-          echo ""
-          echo "Copying custom JavaScript..."
-          mkdir -p target/docs/javascripts
-          cp -v patches/hweb-content/docs/javascripts/loadJSON.js target/docs/javascripts/loadJSON.js
+          # Note: JavaScript files (tablesort.js, tagcopy.js) are kept from upstream
+          # They were already present after the reset to upstream
 
           # Copy custom overrides
           echo ""
           echo "Copying custom overrides..."
-          mkdir -p target/docs/overrides
-          cp -v patches/hweb-content/docs/overrides/main.html target/docs/overrides/main.html
-
-          # Copy custom include files (replace upstream versions)
-          echo ""
-          echo "Copying custom includes..."
-          cp -v patches/hweb-content/includes/header-links.md target/includes/header-links.md
-          cp -v patches/hweb-content/includes/tags.md target/includes/tags.md
+          mkdir -p target/overrides
+          cp -v patches/hweb-content/docs/overrides/main.html target/overrides/main.html
 
           echo ""
           echo "All custom files copied successfully."
@@ -496,6 +533,7 @@ jobs:
             "docs/index.md"
             "docs/faq.md"
             "docs/CNAME"
+            # Container docs
             "docs/containers/base-image.md"
             "docs/containers/caddy.md"
             "docs/containers/obzorarr.md"
@@ -504,13 +542,26 @@ jobs:
             "docs/containers/qflood.md"
             "docs/containers/sabnzbd.md"
             "docs/containers/tgraph-bot.md"
-            "docs/img/engels74.svg"
-            "docs/javascripts/loadJSON.js"
-            "docs/overrides/main.html"
+            # Container tags JSON
+            "docs/containers/base-image-tags.json"
+            "docs/containers/caddy-tags.json"
+            "docs/containers/obzorarr-tags.json"
+            "docs/containers/overseerr-anime-tags.json"
+            "docs/containers/qbittorrent-tags.json"
+            "docs/containers/qflood-tags.json"
+            "docs/containers/sabnzbd-tags.json"
+            "docs/containers/tgraph-bot-tags.json"
+            # JavaScript (from upstream)
+            "docs/javascripts/tablesort.js"
+            "docs/javascripts/tagcopy.js"
+            # CSS (from upstream)
+            "docs/stylesheets/extra-13.css"
+            # Includes (from upstream)
             "includes/annotations.md"
-            "includes/tags.md"
             "includes/wireguard.md"
-            "includes/header-links.md"
+            # Assets
+            "docs/img/engels74.svg"
+            "overrides/main.html"
           )
 
           ERRORS=0
@@ -520,6 +571,21 @@ jobs:
               ERRORS=$((ERRORS + 1))
             else
               echo "OK: $file"
+            fi
+          done
+
+          # Verify obsolete files are NOT present
+          OBSOLETE_FILES=(
+            "docs/javascripts/loadJSON.js"
+            "includes/header-links.md"
+            "includes/tags.md"
+          )
+          for file in "${OBSOLETE_FILES[@]}"; do
+            if [[ -f "$file" ]]; then
+              echo "ERROR: Obsolete file still present: $file"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "OK: $file (correctly removed/not present)"
             fi
           done
 
@@ -540,10 +606,19 @@ jobs:
           fi
 
           # Verify unwanted containers are removed (spot check)
-          UNWANTED_CONTAINERS=("radarr.md" "sonarr.md" "plex.md")
+          UNWANTED_CONTAINERS=("radarr.md" "sonarr.md" "plex.md" "base.md" "rflood.md")
           for container in "${UNWANTED_CONTAINERS[@]}"; do
             if [[ -f "docs/containers/$container" ]]; then
               echo "ERROR: Unwanted container doc still present: $container"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+
+          # Verify unwanted tags.json files are removed (spot check)
+          UNWANTED_TAGS=("radarr-tags.json" "sonarr-tags.json" "plex-tags.json" "base-tags.json")
+          for tags_file in "${UNWANTED_TAGS[@]}"; do
+            if [[ -f "docs/containers/$tags_file" ]]; then
+              echo "ERROR: Unwanted tags.json still present: $tags_file"
               ERRORS=$((ERRORS + 1))
             fi
           done
@@ -599,7 +674,8 @@ jobs:
 
             - Hard reset to upstream hotio/website
             - Applied custom mkdocs.yml with engels74 navigation
-            - Replaced container docs with engels74 versions
+            - Replaced container docs with engels74 versions (pre-rendered tables)
+            - Copied custom container tags.json files
             - Removed scripts and guides sections
             - Cleaned up unused images and avatars
 

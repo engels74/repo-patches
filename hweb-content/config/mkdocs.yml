@@ -1,5 +1,13 @@
-copyright: Copyright &copy; 2023-2024 engels74<br>Based on <a href="https://hotio.dev">hotio.dev</a>. Logos based on work by <a href="https://www.flaticon.com/authors/freepik">Freepik</a> from <a href="https://www.flaticon.com">flaticon.com</a> and <a href="https://freeicons.io/profile/6200">Soni Sokell</a> on <a href="https://freeicons.io">freeicons.io</a>
+site_name: engels74.net
+site_url: https://engels74.net
+site_author: engels74
+site_description: Documentation for Docker images maintained by engels74.
+copyright: 'Copyright &copy; 2023-2026 engels74<br>Based on <a href="https://hotio.dev" target="_blank" rel="noopener">hotio.dev</a>. Logos based on work by <a href="https://www.flaticon.com/authors/freepik" target="_blank" rel="noopener">Freepik</a> from <a href="https://www.flaticon.com" target="_blank" rel="noopener">flaticon.com</a> and <a href="https://freeicons.io/profile/6200" target="_blank" rel="noopener">Soni Sokell</a> on <a href="https://freeicons.io" target="_blank" rel="noopener">freeicons.io</a>'
+repo_name: engels74
+repo_url: https://github.com/engels74
 edit_uri: 'hweb/edit/master/docs'
+site_dir: .build
+docs_dir: docs
 
 extra:
   social:
@@ -11,47 +19,54 @@ extra:
     name: GitHub
 
 extra_css:
-  - stylesheets/extra.css
+  - stylesheets/extra-13.css
 
 extra_javascript:
-  - https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js
-  - javascripts/loadJSON.js
-
-plugins:
-  - search
-
-repo_name: engels74
-repo_url: https://github.com/engels74
-site_author: engels74
-site_description: Documentation for Docker images maintained by engels74.
-site_name: engels74.net
-site_url: https://engels74.net
+  - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
+  - javascripts/tablesort.js
+  - javascripts/tagcopy.js
 
 theme:
   icon:
     repo: fontawesome/brands/github
+    annotation: material/information
   favicon: img/engels74.svg
   features:
     - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
     - navigation.top
     - navigation.footer
+    - navigation.tracking
     - content.code.copy
     - content.code.annotate
+    - content.code.select
+    - content.tooltips
+    - content.tabs.link
+    - toc.follow
   language: en
   logo: img/engels74.svg
   name: material
   palette:
     scheme: hotio
-  custom_dir: docs/overrides
+  custom_dir: overrides
 
 markdown_extensions:
+  - md_in_html
   - pymdownx.details
   - pymdownx.snippets
-  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
   - pymdownx.tabbed:
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
       alternate_style: true
   - pymdownx.superfences
   - pymdownx.emoji:
@@ -61,6 +76,9 @@ markdown_extensions:
   - toc:
       permalink: true
   - admonition
+  - abbr
+  - pymdownx.blocks.caption
+  - tables
 
 nav:
 - Home: index.md

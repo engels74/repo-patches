@@ -1,0 +1,32 @@
+{
+  "release": {
+    "commit_message": "Initial setup",
+    "commit_sha": "0000000",
+    "description": "Releases",
+    "hide": false,
+    "last_updated": "2026-01-09T00:00:00.000Z",
+    "last_updated_url": "https://github.com/engels74/obzorarr-docker/actions",
+    "latest": true,
+    "tags": ["latest", "release", "", "", "", ""]
+  },
+  "nightly": {
+    "commit_message": "Initial setup",
+    "commit_sha": "0000000",
+    "description": "Nightly builds",
+    "hide": false,
+    "last_updated": "2026-01-09T00:00:00.000Z",
+    "last_updated_url": "https://github.com/engels74/obzorarr-docker/actions",
+    "latest": false,
+    "tags": ["nightly", "", "", "", "", ""]
+  },
+  "pr": {
+    "commit_message": "Initial setup",
+    "commit_sha": "0000000",
+    "description": "Pull request testing",
+    "hide": false,
+    "last_updated": "2026-01-09T00:00:00.000Z",
+    "last_updated_url": "https://github.com/engels74/obzorarr-docker/actions",
+    "latest": false,
+    "tags": ["pr", "", "", "", "", ""]
+  }
+}

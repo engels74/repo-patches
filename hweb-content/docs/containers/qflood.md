@@ -1,11 +1,15 @@
 ---
 hide:
   - toc
+title: engels74/qflood
 ---
 
-<div class="image-logo"><img src="/img/image-logos/qflood.svg" alt="logo"></div>
+[:octicons-mark-github-16: GitHub](https://github.com/engels74/qflood){ class="header-links" target="_blank" rel="noopener" }
+[:octicons-container-16: ghcr.io](https://github.com/orgs/engels74/packages/container/package/qflood){ class="header-links" target="_blank" rel="noopener" }
 
---8<-- "includes/header-links.md"
+[:octicons-link-16: Upstream Project](https://github.com/jesec/flood){ class="header-links" target="_blank" rel="noopener" }
+
+<div class="image-logo"><img src="/img/image-logos/qflood.svg" alt="logo"></div>
 
 !!! question "What is this?"
 
@@ -14,6 +18,23 @@ hide:
 ???+ info "What is nightly?"
 
     Nightly means it updates automatically after a successful run of [this workflow file](https://github.com/jesec/flood/actions/workflows/publish-rolling.yml). This means that whenever the official flood repository receives a push commit, this docker image should automatically be updated. All thanks to hotio's brilliant setup.
+
+<div id="tags-table">
+  <table>
+    <thead>
+      <tr>
+        <th>Tags <span class="twemoji" title="Click Tag to Copy"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2z"></path></svg></span></th>
+        <th>Description</th>
+        <th>Commit</th>
+        <th>Last Updated</th>
+      </tr>
+    </thead>
+    <tbody id="tags-table-body">
+<tr><td><div class="tag-decoration-latest">latest</div><div id="tag6001" onclick="CopyToClipboard('tag6001');return false;" class="tag-decoration">release</div></td><td>Releases</td><td><a href="https://github.com/engels74/qflood/commits/release" target="_blank">View commits</a></td><td><a href="https://github.com/engels74/qflood/actions" target="_blank">View builds</a></td></tr>
+<tr><td><div id="tag6002" onclick="CopyToClipboard('tag6002');return false;" class="tag-decoration">nightly</div></td><td>Nightly builds</td><td><a href="https://github.com/engels74/qflood/commits/nightly" target="_blank">View commits</a></td><td><a href="https://github.com/engels74/qflood/actions" target="_blank">View builds</a></td></tr>
+    </tbody>
+  </table>
+</div>
 
 ## Starting the container
 
@@ -60,8 +81,6 @@ hide:
           - /<host_folder_config>:/config
           - /<host_folder_data>:/data
     ```
-
---8<-- "includes/tags.md"
 
 ## Changing the WebUI port
 
