@@ -1,0 +1,11 @@
+/* Custom styles for engels74.net */
+
+/* Container logo sizing */
+.image-logo {
+  margin-bottom: 1rem;
+}
+
+.image-logo img {
+  max-height: 64px;
+  width: auto;
+}

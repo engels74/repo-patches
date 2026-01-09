@@ -20,6 +20,7 @@ extra:
 
 extra_css:
   - stylesheets/extra-13.css
+  - stylesheets/extra-custom.css
 
 extra_javascript:
   - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js

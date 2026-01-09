@@ -374,6 +374,12 @@ jobs:
             done
           fi
 
+          # Copy custom stylesheet
+          if [[ -f "patches/hweb-content/assets/stylesheets/extra-custom.css" ]]; then
+            cp -v patches/hweb-content/assets/stylesheets/extra-custom.css target/docs/stylesheets/extra-custom.css
+            echo "Copied: extra-custom.css"
+          fi
+
           echo ""
           echo "Custom assets copied successfully."
 
@@ -556,6 +562,8 @@ jobs:
             "docs/javascripts/tagcopy.js"
             # CSS (from upstream)
             "docs/stylesheets/extra-13.css"
+            # CSS (custom)
+            "docs/stylesheets/extra-custom.css"
             # Includes (from upstream)
             "includes/annotations.md"
             "includes/wireguard.md"
