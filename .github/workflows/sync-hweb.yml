@@ -31,46 +31,6 @@ jobs:
           path: target
 
       # ============================================================
-      # STEP 1b: Save existing tags.json files before reset
-      # ============================================================
-      # These contain real commit SHAs populated by build workflows.
-      # We save them so they don't get overwritten by template values.
-      - name: Save Existing Tags JSON
-        working-directory: ./target
-        run: |
-          set -e
-          echo "============================================"
-          echo "Saving existing tags.json files..."
-          echo "============================================"
-
-          mkdir -p /tmp/saved-tags
-
-          CONTAINERS=(
-            "base-image"
-            "caddy"
-            "obzorarr"
-            "overseerr-anime"
-            "qbittorrent"
-            "qflood"
-            "sabnzbd"
-            "tgraph-bot"
-          )
-
-          for container in "${CONTAINERS[@]}"; do
-            src="docs/containers/${container}-tags.json"
-            if [[ -f "$src" ]]; then
-              cp -v "$src" "/tmp/saved-tags/"
-              echo "Saved: ${container}-tags.json"
-            else
-              echo "INFO: ${container}-tags.json not found (will use template)"
-            fi
-          done
-
-          echo ""
-          echo "Saved tags.json files:"
-          ls -la /tmp/saved-tags/ 2>/dev/null || echo "(none)"
-
-      # ============================================================
       # STEP 2: Checkout repo-patches for custom content
       # ============================================================
       - name: Checkout Repo Patches
@@ -344,18 +304,12 @@ jobs:
               exit 1
             fi
 
-            # Restore saved -tags.json file only (never use placeholder templates)
-            # Real values are populated by build-on-call.yml after each container build
-            saved_json="/tmp/saved-tags/${container}-tags.json"
+            # Create empty tags.json - real values are populated by build-on-call.yml
+            # after each container build. Base image updates trigger all dependent
+            # container rebuilds, so tags get populated naturally.
             dst_json="target/docs/containers/${container}-tags.json"
-            if [[ -f "$saved_json" ]]; then
-              cp -v "$saved_json" "$dst_json"
-              echo "Restored saved tags.json for ${container}"
-            else
-              # Create empty JSON - tags table will be populated on first build
-              echo '{}' > "$dst_json"
-              echo "INFO: No saved tags.json for ${container} - created empty (will be populated on first build)"
-            fi
+            echo '{}' > "$dst_json"
+            echo "Created empty tags.json for ${container} (populated on build)"
           done
 
           echo ""
