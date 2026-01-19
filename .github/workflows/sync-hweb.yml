@@ -8,9 +8,6 @@ on:
         required: false
         default: 'false'
         type: boolean
-  schedule:
-    # Run weekly on Sundays at 00:00 UTC
-    - cron: '0 0 * * 0'
 
 env:
   TARGET_REPO: engels74/website
@@ -142,15 +139,6 @@ jobs:
             "patches/hweb-content/docs/containers/qflood.md"
             "patches/hweb-content/docs/containers/sabnzbd.md"
             "patches/hweb-content/docs/containers/tgraph-bot.md"
-            # Container tags JSON (8 files)
-            "patches/hweb-content/docs/containers/base-image-tags.json"
-            "patches/hweb-content/docs/containers/caddy-tags.json"
-            "patches/hweb-content/docs/containers/obzorarr-tags.json"
-            "patches/hweb-content/docs/containers/overseerr-anime-tags.json"
-            "patches/hweb-content/docs/containers/qbittorrent-tags.json"
-            "patches/hweb-content/docs/containers/qflood-tags.json"
-            "patches/hweb-content/docs/containers/sabnzbd-tags.json"
-            "patches/hweb-content/docs/containers/tgraph-bot-tags.json"
             # Overrides
             "patches/hweb-content/docs/overrides/main.html"
             # Assets
@@ -356,20 +344,17 @@ jobs:
               exit 1
             fi
 
-            # Restore saved -tags.json file OR use template as fallback
-            # Saved files contain real commit SHAs from build workflows
+            # Restore saved -tags.json file only (never use placeholder templates)
+            # Real values are populated by build-on-call.yml after each container build
             saved_json="/tmp/saved-tags/${container}-tags.json"
-            patch_json="patches/hweb-content/docs/containers/${container}-tags.json"
             dst_json="target/docs/containers/${container}-tags.json"
             if [[ -f "$saved_json" ]]; then
               cp -v "$saved_json" "$dst_json"
               echo "Restored saved tags.json for ${container}"
-            elif [[ -f "$patch_json" ]]; then
-              cp -v "$patch_json" "$dst_json"
-              echo "WARNING: Using template tags.json for ${container} (no saved version)"
             else
-              echo "ERROR: No tags.json available for ${container}"
-              exit 1
+              # Create empty JSON - tags table will be populated on first build
+              echo '{}' > "$dst_json"
+              echo "INFO: No saved tags.json for ${container} - created empty (will be populated on first build)"
             fi
           done
 
