@@ -64,6 +64,23 @@ jobs:
           echo "Upstream fetch complete."
 
       # ============================================================
+      # STEP 4.5: Backup base-image tags before reset
+      # ============================================================
+      - name: Backup Base-Image Tags
+        id: backup-tags
+        run: |
+          set -e
+          if [[ -f "target/docs/containers/base-image-tags.json" ]]; then
+            mkdir -p /tmp/tags-backup
+            cp "target/docs/containers/base-image-tags.json" /tmp/tags-backup/
+            echo "Backed up base-image-tags.json"
+            echo "has_backup=true" >> $GITHUB_OUTPUT
+          else
+            echo "No existing base-image-tags.json to backup"
+            echo "has_backup=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ============================================================
       # STEP 5: Hard reset to upstream (clean slate)
       # ============================================================
       - name: Reset to Upstream
@@ -304,12 +321,17 @@ jobs:
               exit 1
             fi
 
-            # Create empty tags.json - real values are populated by build-on-call.yml
-            # after each container build. Base image updates trigger all dependent
-            # container rebuilds, so tags get populated naturally.
+            # Create tags.json - base-image tags are preserved from backup, others start empty
+            # Base-image is the root dependency, so preserving its tags allows downstream
+            # containers to build successfully. Other container tags self-populate on build.
             dst_json="target/docs/containers/${container}-tags.json"
-            echo '{}' > "$dst_json"
-            echo "Created empty tags.json for ${container} (populated on build)"
+            if [[ "${container}" == "base-image" && -f "/tmp/tags-backup/base-image-tags.json" ]]; then
+              cp "/tmp/tags-backup/base-image-tags.json" "$dst_json"
+              echo "Restored base-image-tags.json from backup"
+            else
+              echo '{}' > "$dst_json"
+              echo "Created empty tags.json for ${container} (populated on build)"
+            fi
           done
 
           echo ""
