@@ -25,7 +25,7 @@ Revived projects, enhanced images, and original creations — all with Docker CL
 
 <div class="e74-registry-category e74-registry-category--base" markdown>
 
-<span class="e74-category-label">:octicons-server-16: Foundation</span>
+**:octicons-server-16: Foundation**{ .e74-category-label }
 
 <div class="e74-container-pills" markdown>
 
@@ -37,7 +37,7 @@ Revived projects, enhanced images, and original creations — all with Docker CL
 
 <div class="e74-registry-category e74-registry-category--apps" markdown>
 
-<span class="e74-category-label">:octicons-repo-forked-16: Hotio Forks</span>
+**:octicons-repo-forked-16: Hotio Forks**{ .e74-category-label }
 
 <div class="e74-container-pills" markdown>
 
@@ -53,7 +53,7 @@ Revived projects, enhanced images, and original creations — all with Docker CL
 
 <div class="e74-registry-category e74-registry-category--custom" markdown>
 
-<span class="e74-category-label">:octicons-code-16: Original Projects</span>
+**:octicons-code-16: Original Projects**{ .e74-category-label }
 
 <div class="e74-container-pills" markdown>
 

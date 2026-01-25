@@ -283,7 +283,7 @@ body {
   border: 1px solid var(--e74-border-subtle);
   box-shadow: var(--e74-shadow);
   position: relative;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .md-typeset pre::before {
