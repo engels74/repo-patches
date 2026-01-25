@@ -52,7 +52,23 @@ theme:
   logo: img/engels74.svg
   name: material
   palette:
-    scheme: hotio
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: DM Sans
+    code: JetBrains Mono
   custom_dir: overrides
 
 markdown_extensions:

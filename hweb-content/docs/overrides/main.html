@@ -1,8 +1,15 @@
 {% extends "base.html" %}
 {% block extrahead %}
-  <meta name="theme-color" content="#3c3f44ff">
-  <link rel="preconnect" href="https://fonts.gstatic.com">
-  <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&display=swap" rel="stylesheet">
+  <!-- Dynamic theme color based on scheme -->
+  <meta name="theme-color" content="#FFFBFA" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0C0A09" media="(prefers-color-scheme: dark)">
+
+  <!-- Fonts: Outfit (display), DM Sans (body), JetBrains Mono (code) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Favicon and Apple icons -->
   <link rel="icon" type="image/svg+xml" href="/img/engels74.svg" />
   <link rel="apple-touch-icon" href="/img/engels74.svg" />
   <meta name="apple-mobile-web-app-title" content="engels74.net" />
