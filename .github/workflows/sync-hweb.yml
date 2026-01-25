@@ -39,7 +39,7 @@ jobs:
           repository: engels74/repo-patches
           token: ${{ secrets.GH_PAT }}
           path: patches
-          ref: feat/ui-crimson-redesign  # TEMP: testing UI redesign branch
+          ref: main
 
       # ============================================================
       # STEP 3: Configure Git
