@@ -1,40 +1,91 @@
 ---
 hide:
   - navigation
+  - toc
 ---
 
-## Welcome
+<div class="e74-hero" markdown>
 
-This is a fork of hotio's [official website](https://hotio.dev), repurposed to document my collection of Docker containers:
+# :material-docker: engels74.net { .e74-hero-title }
 
-- **Revived containers** — forks of hotio's deprecated projects, like qflood
-- **Modified containers** — forks of hotio's images with personal additions, such as Caddy, qBittorrent with built-in themes, and SABnzbd with ffmpeg
-- **Original projects** — documentation for my own dockerized software (obzorarr, tgraph-bot, etc)
+**Docker containers for the media server enthusiast**
+{ .e74-hero-subtitle }
 
-All images come with Docker CLI and Compose examples.
+Revived projects, enhanced images, and original creations — all with Docker CLI and Compose examples.
 
-If you have any questions, feel free to open an issue on the relevant GitHub repository.
+</div>
 
-## Donations
+<div class="e74-registry" markdown>
 
-Show some (monetary) love for hotio - he definitely deserves it! :octicons-heart-fill-24:{: .heart }
+<div class="e74-registry-header" markdown>
 
-[:material-github: GitHub Sponsors](https://github.com/sponsors/mrhotio){: .md-button target=_blank rel="noopener" .donate-button }
-[:fontawesome-solid-money-bill-wave: Open Collective](https://opencollective.com/hotio_collective/donate?interval=month&amount=10){: .md-button target=_blank rel="noopener" .donate-button }
-[:material-bitcoin: Bitcoin](https://bitcoinblockexplorers.com/address/bc1q6zkemu2lacynfg6d6x70l0da0mdpf06pn83jm5){: .md-button target=_blank rel="noopener" .donate-button }
+## :octicons-container-16: Container Registry { .e74-registry-title }
 
-## Affiliate Links
+</div>
 
-If you need a VPN, you can use hotio's affiliate links:
+<div class="e74-registry-category e74-registry-category--base" markdown>
 
-<img src="https://go.getproton.me/aff_i?offer_id=26&aff_id=7223" width="0" height="0" style="position:absolute;visibility:hidden;" border="0" />
-<a href="https://hotio.dev/protonvpn" target="_blank" rel="noopener">
-  <img id="vpnbanner" src="/img/protonvpn@2x.png" alt="ProtonVPN" width="320" height="50">
-</a>
-<a href="https://hotio.dev/pia" target="_blank" rel="noopener">
-  <img id="vpnbanner" src="/img/piavpn728x90.png" alt="PiaVPN" width="404" height="50">
-</a>
+**:octicons-server-16: Foundation**{ .e74-category-label }
 
-## Support
+<div class="e74-container-pills" markdown>
 
-For support, please create an issue on the GitHub repository for the specific container you need help with.
+[base-image](containers/base-image.md){ .e74-pill .e74-pill--base }
+
+</div>
+
+</div>
+
+<div class="e74-registry-category e74-registry-category--apps" markdown>
+
+**:octicons-repo-forked-16: Hotio Forks**{ .e74-category-label }
+
+<div class="e74-container-pills" markdown>
+
+[Caddy](containers/caddy.md){ .e74-pill .e74-pill--apps }
+[Overseerr](containers/overseerr-anime.md){ .e74-pill .e74-pill--apps }
+[qBittorrent](containers/qbittorrent.md){ .e74-pill .e74-pill--apps }
+[qFlood](containers/qflood.md){ .e74-pill .e74-pill--apps }
+[SABnzbd](containers/sabnzbd.md){ .e74-pill .e74-pill--apps }
+
+</div>
+
+</div>
+
+<div class="e74-registry-category e74-registry-category--custom" markdown>
+
+**:octicons-code-16: Original Projects**{ .e74-category-label }
+
+<div class="e74-container-pills" markdown>
+
+[Obzorarr](containers/obzorarr.md){ .e74-pill .e74-pill--custom }
+[tgraph-bot](containers/tgraph-bot.md){ .e74-pill .e74-pill--custom }
+
+</div>
+
+</div>
+
+</div>
+
+<div class="e74-support" markdown>
+
+## :octicons-heart-16: Support
+
+This project builds on [hotio's](https://hotio.dev) excellent work. Consider supporting hotio:
+
+<div class="e74-button-group" markdown>
+
+[:material-github: GitHub Sponsors](https://github.com/sponsors/mrhotio){ .md-button .e74-btn-sponsor target=_blank rel="noopener" }
+[:fontawesome-solid-money-bill-wave: Open Collective](https://opencollective.com/hotio_collective/donate?interval=month&amount=10){ .md-button target=_blank rel="noopener" }
+
+</div>
+
+**Need a VPN?** Use hotio's affiliate links:
+[ProtonVPN](https://hotio.dev/protonvpn){ target=_blank rel="noopener" } · [PIA](https://hotio.dev/pia){ target=_blank rel="noopener" }
+
+</div>
+
+<div class="e74-footer-note" markdown>
+
+For support, open an issue on the relevant [GitHub repository](https://github.com/engels74){ target=_blank rel="noopener" }.
+
+</div>
