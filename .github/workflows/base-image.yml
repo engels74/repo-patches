@@ -3,6 +3,10 @@ name: Sync and Update Repository
 on:
   workflow_dispatch:
 
+concurrency:
+  group: sync-base-image
+  cancel-in-progress: false
+
 jobs:
   sync_hotio_base_image:
     runs-on: ubuntu-latest
