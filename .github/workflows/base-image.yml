@@ -90,13 +90,14 @@ jobs:
             # against multiple repos at once).
             #
             # Root cause upstream (hotio/base@workflows): both update-on-call.yml
-            # and build-on-call.yml declare the same workflow-level concurrency
-            # group `${{ github.repository }}-${{ github.ref_name }}` with
-            # cancel-in-progress: true. In a workflow_call, github.ref_name is
-            # the *caller's* ref, so the build run (triggered on `release` by a
-            # push from the release matrix job) shares the group with the still-
-            # running update run on the same caller ref and preempts it,
-            # killing the nightly matrix job mid-flight.
+            # and build-on-call.yml declare a workflow-level concurrency block
+            # whose group key is "<github.repository>-<github.ref_name>" (in
+            # the Actions expression syntax), with cancel-in-progress: true.
+            # In a workflow_call, github.ref_name resolves to the *caller's*
+            # ref, so the build run (triggered on `release` by a push from the
+            # release matrix job) shares the group with the still-running
+            # update run on the same caller ref and preempts it, killing the
+            # nightly matrix job mid-flight.
             #
             # Fix applied here (only on the workflows branch, where these files
             # live):
@@ -110,10 +111,18 @@ jobs:
             # hotio/base@workflows; the next sync will then carry the upstream
             # version through unchanged. Upstream tracking: file/check an issue
             # at https://github.com/hotio/base before deleting this.
+            #
+            # IMPORTANT: this block must NEVER contain the literal three-char
+            # sequence "dollar-sign + two open curly braces" in any position —
+            # not in code, not in comments — or this parent workflow itself
+            # fails to parse, because Actions tries to evaluate it as an
+            # expression. The OB= line below assembles that sequence at bash
+            # runtime from non-adjacent characters so the parent parser leaves
+            # the lines below alone.
             if [[ "$branch" == "workflows" ]]; then
-              # Assemble literal '${{' at runtime via bash quote-concatenation:
-              # '$' + '' + '{{' → '${{'. This avoids triggering the parent
-              # workflow's own ${{ … }} expression parser on the lines below.
+              # Bash quote-concatenation: '$' + empty '' + '{{' produces the
+              # open delimiter at runtime; '}}' is harmless on its own. The
+              # YAML source never spells the open delimiter directly.
               OB='$''{{'
               CB='}}'
 
