@@ -62,6 +62,24 @@ jobs:
               echo "Updated $CALL_UPDATE"
             fi
 
+            # 2d. TODO(temporary): remove this block once the upstream PR to hotio/base is merged
+            # and the next sync pulls the fix in directly.
+            #
+            # Workflows-branch-only: ensure packages.txt always exists after the upstream-diff
+            # filter so empty filter output (image with zero added packages) doesn't break the
+            # build job's artifact handoff. Replaces `rm -f packages.txt` with `: > packages.txt`.
+            # See https://github.com/engels74/otpravkarr-docker/actions/runs/26359221552 for a
+            # repro of the original failure.
+            if [[ "$branch" == "workflows" ]]; then
+              for wf in ".github/workflows/build-on-call.yml" ".github/workflows/update-on-call.yml"; do
+                if [[ -f "$wf" ]]; then
+                  # TODO(temporary): drop with the block above once hotio/base PR is merged.
+                  sed -i 's|rm -f packages.txt|: > packages.txt|' "$wf"
+                  echo "Patched $wf: rm -f -> : > (temporary; remove after hotio/base PR merges)"
+                fi
+              done
+            fi
+
             # 2c. Branding patches — only on the image branches, not on workflows
             if [[ "$branch" != "workflows" ]]; then
               INIT_SETUP="root/etc/s6-overlay/s6-rc.d/init-setup/run"
