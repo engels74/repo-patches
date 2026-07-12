@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: engels74/base-image
           token: ${{ secrets.GH_PAT }}
@@ -99,7 +99,7 @@ jobs:
           echo "All specified branches processed."
 
       - name: Checkout Repo Patches Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: engels74/repo-patches
           token: ${{ secrets.GH_PAT }}
